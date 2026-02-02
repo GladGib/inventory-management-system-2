@@ -1,0 +1,27 @@
+{
+  "name": "inventory-management-system",
+  "version": "1.0.0",
+  "description": "Inventory Management System for Malaysian SMEs - Auto Parts, Hardware & Spare Parts Wholesalers",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "web"
+  ],
+  "scripts": {
+    "backend:dev": "npm run dev --workspace=backend",
+    "backend:build": "npm run build --workspace=backend",
+    "web:dev": "npm run dev --workspace=web",
+    "web:build": "npm run build --workspace=web",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend"
+  },
+  "keywords": [
+    "inventory",
+    "management",
+    "wholesale",
+    "auto-parts",
+    "malaysia"
+  ],
+  "author": "",
+  "license": "PROPRIETARY"
+}

@@ -1,0 +1,4 @@
+export * from './warehouses.module';
+export * from './warehouses.service';
+export * from './warehouses.controller';
+export * from './dto';

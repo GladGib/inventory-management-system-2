@@ -1,0 +1,173 @@
+import { apiClient, ApiResponse, ApiListResponse } from '@/lib/api-client';
+import { Vendor } from './vendors-service';
+import { Warehouse } from './warehouses-service';
+
+export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'CONFIRMED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'BILLED' | 'CLOSED' | 'CANCELLED';
+
+export interface PurchaseOrderItem {
+  id: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  quantity: number;
+  quantityReceived: number;
+  unitCost: number;
+  lineTotal: number;
+  notes?: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  vendorId: string;
+  vendorCode?: string;
+  vendorName?: string;
+  vendor?: Vendor;
+  warehouseId?: string;
+  warehouseName?: string;
+  warehouse?: Warehouse;
+  orderDate: string;
+  expectedDate?: string;
+  status: PurchaseOrderStatus;
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  notes?: string;
+  internalNotes?: string;
+  lines: PurchaseOrderItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGRNLineRequest {
+  poLineId: string;
+  quantityReceived: number;
+  binLocationId?: string;
+}
+
+export interface CreateGRNRequest {
+  receiveDate?: string;
+  warehouseId?: string;
+  notes?: string;
+  lines: CreateGRNLineRequest[];
+}
+
+export interface GoodsReceivedNote {
+  id: string;
+  grnNumber: string;
+  purchaseOrderId: string;
+  poNumber?: string;
+  vendorName?: string;
+  receiveDate: string;
+  warehouseId?: string;
+  warehouseName?: string;
+  status: string;
+  notes?: string;
+  lines: {
+    id: string;
+    itemId: string;
+    itemCode: string;
+    itemName: string;
+    quantityReceived: number;
+    binLocationId?: string;
+    binLocationCode?: string;
+  }[];
+  createdAt: string;
+}
+
+export interface CreatePurchaseOrderLineRequest {
+  itemId: string;
+  quantity: number;
+  unitCost?: number;
+  notes?: string;
+}
+
+export interface CreatePurchaseOrderRequest {
+  vendorId: string;
+  warehouseId?: string;
+  poNumber?: string;
+  orderDate?: string;
+  expectedDate?: string;
+  notes?: string;
+  internalNotes?: string;
+  lines: CreatePurchaseOrderLineRequest[];
+}
+
+export interface PurchaseOrdersListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: PurchaseOrderStatus;
+  vendorId?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface ReorderSuggestion {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  currentStock: number;
+  reorderPoint: number;
+  reorderQuantity: number;
+  preferredVendorId?: string;
+  preferredVendorName?: string;
+  lastCost?: number;
+}
+
+export const purchasesService = {
+  getPurchaseOrders: async (params?: PurchaseOrdersListParams): Promise<ApiListResponse<PurchaseOrder>> => {
+    const response = await apiClient.get<ApiListResponse<PurchaseOrder>>('/purchase-orders', { params });
+    return response.data;
+  },
+
+  getPurchaseOrder: async (id: string): Promise<PurchaseOrder> => {
+    const response = await apiClient.get<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}`);
+    return response.data.data;
+  },
+
+  createPurchaseOrder: async (data: CreatePurchaseOrderRequest): Promise<PurchaseOrder> => {
+    const response = await apiClient.post<ApiResponse<PurchaseOrder>>('/purchase-orders', data);
+    return response.data.data;
+  },
+
+  updatePurchaseOrder: async (id: string, data: Partial<CreatePurchaseOrderRequest>): Promise<PurchaseOrder> => {
+    const response = await apiClient.put<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}`, data);
+    return response.data.data;
+  },
+
+  deletePurchaseOrder: async (id: string): Promise<void> => {
+    await apiClient.delete(`/purchase-orders/${id}`);
+  },
+
+  sendOrder: async (id: string): Promise<PurchaseOrder> => {
+    const response = await apiClient.post<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}/send`);
+    return response.data.data;
+  },
+
+  confirmOrder: async (id: string): Promise<PurchaseOrder> => {
+    const response = await apiClient.post<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}/confirm`);
+    return response.data.data;
+  },
+
+  cancelOrder: async (id: string, reason?: string): Promise<PurchaseOrder> => {
+    const response = await apiClient.post<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}/cancel`, { reason });
+    return response.data.data;
+  },
+
+  createGRN: async (id: string, data: CreateGRNRequest): Promise<GoodsReceivedNote> => {
+    const response = await apiClient.post<ApiResponse<GoodsReceivedNote>>(`/purchase-orders/${id}/receive`, data);
+    return response.data.data;
+  },
+
+  getGRNs: async (id: string): Promise<GoodsReceivedNote[]> => {
+    // Note: There's no dedicated GET endpoint for GRNs - they come with the PO response
+    const response = await apiClient.get<ApiResponse<GoodsReceivedNote[]>>(`/purchase-orders/${id}/receive`);
+    return response.data.data;
+  },
+
+  getReorderSuggestions: async (): Promise<ReorderSuggestion[]> => {
+    const response = await apiClient.get<ApiResponse<ReorderSuggestion[]>>('/purchase-orders/reorder-suggestions');
+    return response.data.data;
+  },
+};
