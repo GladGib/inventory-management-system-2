@@ -13,21 +13,25 @@ Incomplete tasks carried over from the MVP implementation (inventory-management-
 - [ ] 5.7 Write unit tests for organization service
 - [x] 6.10 Write unit tests for items service *(implemented)*
 - [ ] 6.11 Write E2E tests for items endpoints
-- [ ] 7.10 Write unit tests for customers service
-- [ ] 8.8 Write unit tests for vendors service
-- [ ] 9.8 Write unit tests for warehouses service
+- [x] 7.10 Write unit tests for customers service *(19 tests in customers.service.spec.ts)*
+- [x] 8.8 Write unit tests for vendors service *(27 tests in vendors.service.spec.ts)*
+- [x] 9.8 Write unit tests for warehouses service *(32 tests in warehouses.service.spec.ts)*
 - [x] 10.13 Write unit tests for sales orders service *(implemented)*
 - [ ] 10.14 Write E2E tests for sales order workflow
-- [ ] 11.11 Write unit tests for invoicing service
-- [ ] 13.9 Write unit tests for purchase orders service
+- [x] 11.11 Write unit tests for invoicing service *(29 tests in invoices.service.spec.ts)*
+- [x] 13.9 Write unit tests for purchase orders service *(implemented in purchases.service.spec.ts)*
 - [ ] 13.10 Write E2E tests for PO workflow
 - [ ] 14.9 Write unit tests for goods receiving service
-- [ ] 16.12 Write unit tests for stock management service
+- [x] 16.12 Write unit tests for stock management service *(32 tests in inventory.service.spec.ts)*
 
 **Additional tests found (not in original backlog):**
 - [x] Reports service unit tests *(implemented)*
 - [x] Bills service unit tests *(implemented)*
 - [x] Sales returns service unit tests *(implemented)*
+
+**E2E Test Infrastructure:**
+- [x] E2E test configuration with uuid ESM handling *(jest-e2e.json updated)*
+- [x] Basic E2E tests for auth and protected routes *(8 tests in app.e2e-spec.ts)*
 
 ## Backend: File Uploads & Media
 
@@ -39,7 +43,7 @@ Incomplete tasks carried over from the MVP implementation (inventory-management-
 - [ ] 6.9 Implement bulk item import from CSV
 - [ ] 7.9 Implement bulk customer import from CSV
 - [ ] 8.7 Implement bulk vendor import from CSV
-- [ ] 17.12 Implement Excel export for reports
+- [x] 17.12 Implement Excel export for reports *(stock-valuation and sales-by-customer endpoints in reports.controller.ts)*
 
 ## Backend: Item Variants
 
@@ -210,7 +214,7 @@ Incomplete tasks carried over from the MVP implementation (inventory-management-
 
 ## Integration & Testing
 
-- [ ] 41.1 Setup E2E testing environment
+- [x] 41.1 Setup E2E testing environment *(jest-e2e.json configured, basic tests passing)*
 - [ ] 41.2 Write E2E tests for complete sales workflow
 - [ ] 41.3 Write E2E tests for complete purchase workflow
 - [ ] 41.4 Write E2E tests for stock management workflow
@@ -232,42 +236,45 @@ Incomplete tasks carried over from the MVP implementation (inventory-management-
 
 | Category | Total | Completed | Remaining |
 |----------|-------|-----------|-----------|
-| Backend Tests | 17 | 3 | 14 |
-| Backend Features | 18 | 4 | 14 |
+| Backend Tests | 22 | 15 | 7 |
+| Backend Features | 18 | 5 | 13 |
 | Web Frontend | 44 | 14 | 30 |
 | Mobile | 27 | 22 | 5 |
-| Integration & Deployment | 12 | 0 | 12 |
-| **Total** | **118** | **43** | **75** |
+| Integration & Deployment | 12 | 1 | 11 |
+| **Total** | **123** | **57** | **66** |
 
-### Progress: 36% Complete (43/118 tasks)
+### Progress: 46% Complete (57/123 tasks)
 
-### Suggested Phase 2 Priorities
+### Suggested Phase 3 Priorities
 
 1. **High Priority - Complete Core Web Workflows**
    - GRN creation form with quantity entry (29.2-29.4)
    - Bill creation from GRN (30.2)
    - Return creation from invoice (27.2)
    - Stock count entry form (31.5-31.7)
+   - PDF/Excel export buttons in report UI (32.10)
 
 2. **Medium Priority - Backend Features**
    - Shipment creation endpoint (10.10)
    - Credit note generation (12.6, 12.7)
    - Vendor credit notes (15.7)
    - Email sending endpoints (13.6, 26.7)
+   - Goods receiving service unit tests (14.9)
 
-3. **Medium Priority - Missing Tests**
-   - E2E tests for auth, items, sales workflows
-   - Unit tests for customers, vendors, warehouses
+3. **Medium Priority - E2E Tests**
+   - E2E tests for complete sales workflow (41.2)
+   - E2E tests for complete purchase workflow (41.3)
+   - E2E tests for stock management workflow (41.4)
 
 4. **Lower Priority - Nice to Have**
-   - Bulk import/export
-   - Item variants
+   - Bulk import/export (CSV)
+   - Item variants management
    - File uploads (logos, images)
-   - Full test coverage
    - Mobile push notifications
+   - Mobile conflict detection
 
 ---
 
-*Generated: 2026-02-03*
+*Updated: 2026-02-04*
 *Validated against codebase implementation*
-*Source: inventory-management-system change (archived)*
+*Source: ims-phase-2-completion and ims-phase-2-tests-and-gaps changes (archived)*
