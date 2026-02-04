@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,8 +17,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiProduces,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { SalesService } from './sales.service';
+import { ShipmentsService } from './shipments.service';
 import {
   CreateSalesOrderDto,
   UpdateSalesOrderDto,
@@ -28,14 +32,22 @@ import {
   CreatePickListDto,
   ProcessPickListDto,
   PickListResponseDto,
+  CreateShipmentDto,
+  UpdateShipmentDto,
+  ShipmentResponseDto,
 } from './dto';
 import { CurrentUser } from '@/common/decorators';
+import { PdfService } from '@/common/pdf';
 
 @ApiTags('Sales Orders')
 @ApiBearerAuth()
 @Controller('sales-orders')
 export class SalesController {
-  constructor(private salesService: SalesService) {}
+  constructor(
+    private salesService: SalesService,
+    private shipmentsService: ShipmentsService,
+    private pdfService: PdfService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new sales order' })
@@ -90,6 +102,28 @@ export class SalesController {
   ) {
     const order = await this.salesService.findOne(orgId, id);
     return { data: order };
+  }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download sales order as PDF' })
+  @ApiProduces('application/pdf')
+  @ApiResponse({ status: 200, description: 'PDF file' })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  async downloadPdf(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const orderData = await this.salesService.getOrderForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generateSalesOrderPdf(orderData);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="sales-order-${orderData.orderNumber}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
   }
 
   @Put(':id')
@@ -193,6 +227,105 @@ export class SalesController {
   ) {
     const pickList = await this.salesService.createPickList(orgId, orderId, dto);
     return { data: pickList };
+  }
+
+  // Shipments
+  @Post(':id/shipments')
+  @ApiOperation({ summary: 'Create shipment for sales order' })
+  @ApiResponse({ status: 201, type: ShipmentResponseDto })
+  @ApiResponse({ status: 400, description: 'Order not in shippable status' })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  async createShipment(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') orderId: string,
+    @Body() dto: CreateShipmentDto,
+  ) {
+    const shipment = await this.shipmentsService.create(orgId, orderId, dto);
+    return { data: shipment };
+  }
+
+  @Get(':id/shipments')
+  @ApiOperation({ summary: 'Get shipments for sales order' })
+  @ApiResponse({ status: 200, type: [ShipmentResponseDto] })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  async getShipments(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') orderId: string,
+  ) {
+    const shipments = await this.shipmentsService.findAll(orgId, orderId);
+    return { data: shipments };
+  }
+}
+
+@ApiTags('Shipments')
+@ApiBearerAuth()
+@Controller('shipments')
+export class ShipmentsController {
+  constructor(
+    private shipmentsService: ShipmentsService,
+    private pdfService: PdfService,
+  ) {}
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get shipment by ID' })
+  @ApiResponse({ status: 200, type: ShipmentResponseDto })
+  @ApiResponse({ status: 404, description: 'Shipment not found' })
+  async findOne(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    const shipment = await this.shipmentsService.findOne(orgId, id);
+    return { data: shipment };
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update shipment' })
+  @ApiResponse({ status: 200, type: ShipmentResponseDto })
+  @ApiResponse({ status: 400, description: 'Cannot update delivered shipment' })
+  @ApiResponse({ status: 404, description: 'Shipment not found' })
+  async update(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateShipmentDto,
+  ) {
+    const shipment = await this.shipmentsService.update(orgId, id, dto);
+    return { data: shipment };
+  }
+
+  @Post(':id/deliver')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark shipment as delivered' })
+  @ApiResponse({ status: 200, type: ShipmentResponseDto })
+  @ApiResponse({ status: 400, description: 'Shipment already delivered' })
+  @ApiResponse({ status: 404, description: 'Shipment not found' })
+  async markDelivered(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    const shipment = await this.shipmentsService.markDelivered(orgId, id);
+    return { data: shipment };
+  }
+
+  @Get(':id/delivery-order')
+  @ApiOperation({ summary: 'Download delivery order PDF' })
+  @ApiProduces('application/pdf')
+  @ApiResponse({ status: 200, description: 'PDF file' })
+  @ApiResponse({ status: 404, description: 'Shipment not found' })
+  async downloadDeliveryOrder(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const shipmentData = await this.shipmentsService.getShipmentForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generateDeliveryOrderPdf(shipmentData);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="DO-${shipmentData.shipmentNumber}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
   }
 }
 

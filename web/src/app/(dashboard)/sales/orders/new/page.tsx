@@ -160,13 +160,13 @@ export default function NewSalesOrderPage() {
     }).format(value);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const subtotal = items.reduce((sum, item) => sum + (item.quantity * (item.unitPrice ?? 0)), 0);
   const totalDiscount = items.reduce(
-    (sum, item) => sum + (item.quantity * item.unitPrice * (item.discountPercent || 0) / 100),
+    (sum, item) => sum + (item.quantity * (item.unitPrice ?? 0) * (item.discountPercent || 0) / 100),
     0
   );
   const totalTax = items.reduce((sum, item) => {
-    const afterDiscount = item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100);
+    const afterDiscount = item.quantity * (item.unitPrice ?? 0) * (1 - (item.discountPercent || 0) / 100);
     return sum + afterDiscount * (item.taxPercent || 0) / 100;
   }, 0);
   const grandTotal = items.reduce((sum, item) => sum + item.lineTotal, 0);

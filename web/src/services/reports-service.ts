@@ -34,6 +34,49 @@ export interface ReportParams {
   fromDate?: string;
   toDate?: string;
   warehouseId?: string;
+  categoryId?: string;
+}
+
+export interface StockValuationItem {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  categoryName: string;
+  unitCost: number;
+  totalQuantity: number;
+  totalValue: number;
+  stockByWarehouse: { warehouseId: string; warehouseName: string; quantity: number; value: number }[];
+}
+
+export interface StockValuationReport {
+  summary: {
+    totalItems: number;
+    totalQuantity: number;
+    totalValue: number;
+  };
+  items: StockValuationItem[];
+}
+
+export interface SalesByCustomerItem {
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  orderCount: number;
+  totalQuantity: number;
+  totalRevenue: number;
+  totalProfit: number;
+  averageOrderValue: number;
+  recentOrders: { orderId: string; orderNumber: string; orderDate: string; status: string; total: number }[];
+}
+
+export interface SalesByCustomerReport {
+  summary: {
+    totalCustomers: number;
+    totalOrders: number;
+    totalRevenue: number;
+    totalProfit: number;
+  };
+  customers: SalesByCustomerItem[];
 }
 
 export const reportsService = {
@@ -66,5 +109,15 @@ export const reportsService = {
       responseType: 'blob',
     });
     return response.data;
+  },
+
+  getStockValuation: async (params?: ReportParams): Promise<StockValuationReport> => {
+    const response = await apiClient.get<ApiResponse<StockValuationReport>>('/reports/stock-valuation', { params });
+    return response.data.data;
+  },
+
+  getSalesByCustomer: async (params?: ReportParams): Promise<SalesByCustomerReport> => {
+    const response = await apiClient.get<ApiResponse<SalesByCustomerReport>>('/reports/sales-by-customer', { params });
+    return response.data.data;
   },
 };

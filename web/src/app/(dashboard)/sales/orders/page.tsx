@@ -217,11 +217,11 @@ export default function SalesOrdersPage() {
     },
     {
       title: 'Items',
-      dataIndex: 'items',
+      dataIndex: 'lines',
       key: 'itemCount',
       width: 80,
       align: 'center',
-      render: (items: SalesOrder['items']) => items?.length || 0,
+      render: (lines: SalesOrder['lines']) => lines?.length || 0,
     },
     {
       title: 'Total',

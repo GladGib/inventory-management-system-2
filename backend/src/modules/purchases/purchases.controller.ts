@@ -8,6 +8,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,7 +16,9 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiProduces,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { PurchasesService } from './purchases.service';
 import {
   CreatePurchaseOrderDto,
@@ -23,15 +26,20 @@ import {
   PurchaseOrderResponseDto,
   CreatePurchaseOrderLineDto,
   CreateGRNDto,
+  CreateDirectGRNDto,
   GRNResponseDto,
 } from './dto';
 import { CurrentUser } from '@/common/decorators';
+import { PdfService } from '@/common/pdf';
 
 @ApiTags('Purchase Orders')
 @ApiBearerAuth()
 @Controller('purchase-orders')
 export class PurchasesController {
-  constructor(private purchasesService: PurchasesService) {}
+  constructor(
+    private purchasesService: PurchasesService,
+    private pdfService: PdfService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new purchase order' })
@@ -84,6 +92,49 @@ export class PurchasesController {
     return { data: suggestions };
   }
 
+  @Get('grn')
+  @ApiOperation({ summary: 'List all goods received notes' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'vendorId', required: false, type: String })
+  @ApiQuery({ name: 'fromDate', required: false, type: String })
+  @ApiQuery({ name: 'toDate', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Goods received notes list' })
+  async findAllGRNs(
+    @CurrentUser('organizationId') orgId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('vendorId') vendorId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+  ) {
+    return this.purchasesService.findAllGRNs(orgId, {
+      page,
+      limit,
+      search,
+      status,
+      vendorId,
+      fromDate,
+      toDate,
+    });
+  }
+
+  @Get('grn/:id')
+  @ApiOperation({ summary: 'Get goods received note by ID' })
+  @ApiResponse({ status: 200, type: GRNResponseDto })
+  @ApiResponse({ status: 404, description: 'GRN not found' })
+  async findOneGRN(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    const grn = await this.purchasesService.findOneGRN(orgId, id);
+    return { data: grn };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get purchase order by ID' })
   @ApiResponse({ status: 200, type: PurchaseOrderResponseDto })
@@ -94,6 +145,50 @@ export class PurchasesController {
   ) {
     const po = await this.purchasesService.findOne(orgId, id);
     return { data: po };
+  }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download purchase order as PDF' })
+  @ApiProduces('application/pdf')
+  @ApiResponse({ status: 200, description: 'PDF file' })
+  @ApiResponse({ status: 404, description: 'Purchase order not found' })
+  async downloadPdf(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const orderData = await this.purchasesService.getOrderForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generatePurchaseOrderPdf(orderData);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="purchase-order-${orderData.poNumber}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
+  }
+
+  @Get('grn/:id/pdf')
+  @ApiOperation({ summary: 'Download goods received note as PDF' })
+  @ApiProduces('application/pdf')
+  @ApiResponse({ status: 200, description: 'PDF file' })
+  @ApiResponse({ status: 404, description: 'GRN not found' })
+  async downloadGRNPdf(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const grnData = await this.purchasesService.getGRNForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generateGRNPdf(grnData);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="grn-${grnData.grnNumber}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
   }
 
   @Put(':id')
@@ -164,5 +259,92 @@ export class PurchasesController {
   ) {
     const grn = await this.purchasesService.createGRN(orgId, poId, dto);
     return { data: grn };
+  }
+}
+
+@ApiTags('Goods Received Notes')
+@ApiBearerAuth()
+@Controller('grns')
+export class GRNsController {
+  constructor(
+    private purchasesService: PurchasesService,
+    private pdfService: PdfService,
+  ) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create direct GRN (without PO)' })
+  @ApiResponse({ status: 201, type: GRNResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 404, description: 'Vendor or warehouse not found' })
+  async createDirectGRN(
+    @CurrentUser('organizationId') orgId: string,
+    @Body() dto: CreateDirectGRNDto,
+  ) {
+    const grn = await this.purchasesService.createDirectGRN(orgId, dto);
+    return { data: grn };
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List all goods received notes' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'vendorId', required: false, type: String })
+  @ApiQuery({ name: 'fromDate', required: false, type: String })
+  @ApiQuery({ name: 'toDate', required: false, type: String })
+  async findAll(
+    @CurrentUser('organizationId') orgId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('vendorId') vendorId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+  ) {
+    return this.purchasesService.findAllGRNs(orgId, {
+      page,
+      limit,
+      search,
+      status,
+      vendorId,
+      fromDate,
+      toDate,
+    });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get GRN by ID' })
+  @ApiResponse({ status: 200, type: GRNResponseDto })
+  @ApiResponse({ status: 404, description: 'GRN not found' })
+  async findOne(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    const grn = await this.purchasesService.findOneGRN(orgId, id);
+    return { data: grn };
+  }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Download GRN as PDF' })
+  @ApiProduces('application/pdf')
+  @ApiResponse({ status: 200, description: 'PDF file' })
+  @ApiResponse({ status: 404, description: 'GRN not found' })
+  async downloadPdf(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const grnData = await this.purchasesService.getGRNForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generateGRNPdf(grnData);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="GRN-${grnData.grnNumber}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
   }
 }

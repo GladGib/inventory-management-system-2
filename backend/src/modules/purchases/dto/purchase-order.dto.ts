@@ -8,6 +8,7 @@ import {
   ValidateNested,
   Min,
   IsNotEmpty,
+  ArrayMinSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -357,4 +358,71 @@ export class ReorderSuggestionDto {
 
   @ApiPropertyOptional()
   vendorUnitCost?: number;
+}
+
+// Direct GRN (without PO) DTOs
+export class DirectGRNLineDto {
+  @ApiProperty({ description: 'Item ID' })
+  @IsString()
+  @IsNotEmpty()
+  itemId: string;
+
+  @ApiProperty({ description: 'Quantity received' })
+  @IsNumber()
+  @Min(1)
+  quantityReceived: number;
+
+  @ApiProperty({ description: 'Unit cost' })
+  @IsNumber()
+  @Min(0)
+  unitCost: number;
+
+  @ApiPropertyOptional({ description: 'Bin location ID' })
+  @IsOptional()
+  @IsString()
+  binLocationId?: string;
+
+  @ApiPropertyOptional({ description: 'Bin location code (alternative to ID)' })
+  @IsOptional()
+  @IsString()
+  binLocationCode?: string;
+
+  @ApiPropertyOptional({ description: 'Notes' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class CreateDirectGRNDto {
+  @ApiProperty({ description: 'Vendor ID' })
+  @IsString()
+  @IsNotEmpty()
+  vendorId: string;
+
+  @ApiProperty({ description: 'Warehouse ID' })
+  @IsString()
+  @IsNotEmpty()
+  warehouseId: string;
+
+  @ApiPropertyOptional({ description: 'Receive date' })
+  @IsOptional()
+  @IsDateString()
+  receiveDate?: string;
+
+  @ApiPropertyOptional({ description: 'Vendor invoice number' })
+  @IsOptional()
+  @IsString()
+  vendorInvoiceNo?: string;
+
+  @ApiPropertyOptional({ description: 'Notes' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty({ type: [DirectGRNLineDto], description: 'Items received' })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DirectGRNLineDto)
+  @ArrayMinSize(1)
+  lines: DirectGRNLineDto[];
 }

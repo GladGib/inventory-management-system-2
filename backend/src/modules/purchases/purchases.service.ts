@@ -13,6 +13,7 @@ import {
   CreatePurchaseOrderLineDto,
   UpdatePurchaseOrderLineDto,
   CreateGRNDto,
+  CreateDirectGRNDto,
   GRNResponseDto,
   ReorderSuggestionDto,
   PurchaseOrderStatus,
@@ -166,6 +167,97 @@ export class PurchasesService {
     }
 
     return this.toPurchaseOrderResponse(po);
+  }
+
+  async getOrderForPdf(organizationId: string, id: string) {
+    const po = await this.prisma.purchaseOrder.findFirst({
+      where: { id, organizationId },
+      include: {
+        organization: true,
+        vendor: true,
+        warehouse: true,
+        lines: { include: { item: true } },
+      },
+    });
+
+    if (!po) {
+      throw new NotFoundException('Purchase order not found');
+    }
+
+    return {
+      poNumber: po.orderNumber,
+      orderDate: po.orderDate,
+      expectedDate: po.expectedDeliveryDate || undefined,
+      organization: {
+        name: po.organization.name,
+        address: po.organization.address || undefined,
+        phone: po.organization.phone || undefined,
+        email: po.organization.email || undefined,
+      },
+      vendor: {
+        companyName: po.vendor.companyName,
+        phone: po.vendor.phone || undefined,
+        email: po.vendor.email || undefined,
+      },
+      warehouse: po.warehouse
+        ? { name: po.warehouse.name }
+        : undefined,
+      lines: po.lines.map((line: any) => ({
+        itemCode: line.item.code,
+        itemName: line.item.name,
+        quantity: line.quantity,
+        unitCost: Number(line.unitPrice),
+        lineTotal: Number(line.lineTotal),
+      })),
+      subtotal: Number(po.subtotal),
+      taxAmount: Number(po.taxAmount),
+      total: Number(po.total),
+      notes: po.notes || undefined,
+    };
+  }
+
+  async getGRNForPdf(organizationId: string, id: string) {
+    const grn = await this.prisma.goodsReceivedNote.findFirst({
+      where: { id, organizationId },
+      include: {
+        organization: true,
+        purchaseOrder: true,
+        vendor: true,
+        warehouse: true,
+        lines: {
+          include: {
+            item: true,
+          },
+        },
+      },
+    });
+
+    if (!grn) {
+      throw new NotFoundException('Goods received note not found');
+    }
+
+    return {
+      grnNumber: grn.grnNumber,
+      poNumber: grn.purchaseOrder?.orderNumber || undefined,
+      receiveDate: grn.receiveDate,
+      organization: {
+        name: grn.organization.name,
+      },
+      vendor: {
+        companyName: grn.vendor.companyName,
+      },
+      warehouse: {
+        name: grn.warehouse?.name || '',
+      },
+      lines: grn.lines.map((line: any) => ({
+        itemCode: line.item.code,
+        itemName: line.item.name,
+        orderedQty: line.orderedQty || undefined,
+        receivedQty: line.receivedQty,
+        binLocationId: line.binLocationId || undefined,
+      })),
+      notes: grn.notes || undefined,
+    };
   }
 
   async update(
@@ -486,6 +578,276 @@ export class PurchasesService {
       where: { id: poId },
       data: { status: allReceived ? 'RECEIVED' : 'PARTIALLY_RECEIVED' },
     });
+
+    return this.toGRNResponse(grn);
+  }
+
+  // Direct GRN (without PO)
+  async createDirectGRN(
+    organizationId: string,
+    dto: CreateDirectGRNDto,
+  ): Promise<GRNResponseDto> {
+    // Validate vendor exists
+    const vendor = await this.prisma.vendor.findFirst({
+      where: { id: dto.vendorId, organizationId, deletedAt: null },
+    });
+
+    if (!vendor) {
+      throw new NotFoundException('Vendor not found');
+    }
+
+    // Validate warehouse exists
+    const warehouse = await this.prisma.warehouse.findFirst({
+      where: { id: dto.warehouseId, organizationId, deletedAt: null },
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException('Warehouse not found');
+    }
+
+    // Validate items and resolve bin locations
+    const itemIds = dto.lines.map((l) => l.itemId);
+    const items = await this.prisma.item.findMany({
+      where: { id: { in: itemIds }, organizationId },
+    });
+
+    if (items.length !== itemIds.length) {
+      throw new BadRequestException('One or more items not found');
+    }
+
+    const itemMap = new Map(items.map((i) => [i.id, i]));
+
+    // Resolve bin location codes to IDs
+    const resolvedLines: any[] = [];
+    for (const line of dto.lines) {
+      let binLocationId = line.binLocationId;
+
+      // If bin code provided instead of ID, resolve it
+      if (!binLocationId && line.binLocationCode) {
+        const binLocation = await this.prisma.binLocation.findFirst({
+          where: {
+            warehouseId: dto.warehouseId,
+            code: line.binLocationCode,
+          },
+        });
+
+        if (!binLocation) {
+          throw new BadRequestException(
+            `Bin location '${line.binLocationCode}' not found in warehouse`,
+          );
+        }
+        binLocationId = binLocation.id;
+      }
+
+      // Validate bin location belongs to warehouse if provided
+      if (binLocationId) {
+        const binLocation = await this.prisma.binLocation.findFirst({
+          where: { id: binLocationId, warehouseId: dto.warehouseId },
+        });
+
+        if (!binLocation) {
+          throw new BadRequestException('Bin location not found in specified warehouse');
+        }
+      }
+
+      const item = itemMap.get(line.itemId);
+      resolvedLines.push({
+        itemId: line.itemId,
+        receivedQty: line.quantityReceived,
+        unitPrice: line.unitCost,
+        binLocationId,
+        notes: line.notes,
+        item,
+      });
+    }
+
+    const grnNumber = await this.organizationsService.getNextNumber(organizationId, 'GRN');
+
+    const grn = await this.prisma.goodsReceivedNote.create({
+      data: {
+        organizationId,
+        grnNumber,
+        purchaseOrderId: null, // No PO
+        vendorId: dto.vendorId,
+        warehouseId: dto.warehouseId,
+        receiveDate: dto.receiveDate ? new Date(dto.receiveDate) : new Date(),
+        status: 'CONFIRMED',
+        notes: dto.notes,
+        lines: {
+          create: resolvedLines.map((line) => ({
+            itemId: line.itemId,
+            orderedQty: 0, // No ordered qty for direct GRN
+            receivedQty: line.receivedQty,
+            unitPrice: line.unitPrice,
+            binLocationId: line.binLocationId,
+          })),
+        },
+      },
+      include: {
+        purchaseOrder: { include: { vendor: true } },
+        vendor: true,
+        warehouse: true,
+        lines: {
+          include: {
+            item: true,
+          },
+        },
+      },
+    });
+
+    // Update stock levels for each line
+    for (const line of resolvedLines) {
+      if (line.item?.trackInventory) {
+        const existingStock = await this.prisma.stockLevel.findFirst({
+          where: {
+            itemId: line.itemId,
+            warehouseId: dto.warehouseId,
+            binLocationId: line.binLocationId || null,
+          },
+        });
+
+        if (existingStock) {
+          await this.prisma.stockLevel.update({
+            where: { id: existingStock.id },
+            data: {
+              onHand: { increment: line.receivedQty },
+            },
+          });
+        } else {
+          await this.prisma.stockLevel.create({
+            data: {
+              itemId: line.itemId,
+              warehouseId: dto.warehouseId,
+              binLocationId: line.binLocationId,
+              onHand: line.receivedQty,
+              committed: 0,
+              onOrder: 0,
+            },
+          });
+        }
+
+        // Create stock movement
+        await this.prisma.stockMovement.create({
+          data: {
+            itemId: line.itemId,
+            warehouseId: dto.warehouseId,
+            movementType: 'IN',
+            quantity: line.receivedQty,
+            referenceType: 'GRN',
+            referenceId: grn.id,
+            notes: dto.vendorInvoiceNo ? `Vendor Invoice: ${dto.vendorInvoiceNo}` : undefined,
+          },
+        });
+      }
+    }
+
+    return this.toGRNResponse(grn);
+  }
+
+  // GRN Listing
+  async findAllGRNs(
+    organizationId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+      vendorId?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
+  ) {
+    const page = options?.page || 1;
+    const limit = Math.min(options?.limit || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      organizationId,
+    };
+
+    if (options?.search) {
+      where.OR = [
+        { grnNumber: { contains: options.search, mode: 'insensitive' } },
+        { purchaseOrder: { orderNumber: { contains: options.search, mode: 'insensitive' } } },
+        { vendor: { companyName: { contains: options.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (options?.status) {
+      where.status = options.status;
+    }
+
+    if (options?.vendorId) {
+      where.vendorId = options.vendorId;
+    }
+
+    if (options?.fromDate) {
+      where.receiveDate = { ...where.receiveDate, gte: new Date(options.fromDate) };
+    }
+
+    if (options?.toDate) {
+      where.receiveDate = { ...where.receiveDate, lte: new Date(options.toDate) };
+    }
+
+    const [grns, total] = await Promise.all([
+      this.prisma.goodsReceivedNote.findMany({
+        where,
+        include: {
+          purchaseOrder: { select: { orderNumber: true } },
+          vendor: { select: { code: true, companyName: true } },
+          warehouse: { select: { name: true } },
+          _count: { select: { lines: true } },
+        },
+        skip,
+        take: limit,
+        orderBy: { receiveDate: 'desc' },
+      }),
+      this.prisma.goodsReceivedNote.count({ where }),
+    ]);
+
+    return {
+      data: grns.map((grn: any) => ({
+        id: grn.id,
+        grnNumber: grn.grnNumber,
+        purchaseOrderId: grn.purchaseOrderId,
+        poNumber: grn.purchaseOrder?.orderNumber,
+        vendorId: grn.vendorId,
+        vendorCode: grn.vendor.code,
+        vendorName: grn.vendor.companyName,
+        warehouseId: grn.warehouseId,
+        warehouseName: grn.warehouse?.name,
+        receiveDate: grn.receiveDate,
+        status: grn.status,
+        lineCount: grn._count?.lines || 0,
+        createdAt: grn.createdAt,
+      })),
+      meta: { total, page, limit },
+    };
+  }
+
+  async findOneGRN(organizationId: string, id: string): Promise<GRNResponseDto> {
+    const grn = await this.prisma.goodsReceivedNote.findFirst({
+      where: { id, organizationId },
+      include: {
+        purchaseOrder: {
+          include: {
+            vendor: true,
+            lines: { include: { item: true } },
+          },
+        },
+        vendor: true,
+        warehouse: true,
+        lines: {
+          include: {
+            item: true,
+          },
+        },
+      },
+    });
+
+    if (!grn) {
+      throw new NotFoundException('Goods received note not found');
+    }
 
     return this.toGRNResponse(grn);
   }

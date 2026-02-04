@@ -101,7 +101,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
 
   const { data: grns } = useQuery({
     queryKey: ['purchase-order-grns', id],
-    queryFn: () => purchasesService.getGRNs(id),
+    queryFn: () => purchasesService.getGRNs({ purchaseOrderId: id }),
     enabled: !!order && ['PARTIALLY_RECEIVED', 'RECEIVED'].includes(order.status),
   });
 
@@ -431,13 +431,13 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                       {formatCurrency(order.subtotal)}
                     </Table.Summary.Cell>
                   </Table.Summary.Row>
-                  {order.discountAmount > 0 && (
+                  {(order.discountAmount ?? 0) > 0 && (
                     <Table.Summary.Row>
                       <Table.Summary.Cell index={0} colSpan={7} align="right">
                         <Text type="secondary">Discount:</Text>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="right" className="text-red-500">
-                        -{formatCurrency(order.discountAmount)}
+                        -{formatCurrency(order.discountAmount ?? 0)}
                       </Table.Summary.Cell>
                     </Table.Summary.Row>
                   )}
@@ -466,21 +466,20 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
             />
           </Card>
 
-          {grns && grns.length > 0 && (
+          {grns?.data && grns.data.length > 0 && (
             <Card title="Goods Received Notes" className="mb-6">
               <Timeline
-                items={grns.map((grn) => ({
+                items={grns.data.map((grn) => ({
                   color: 'green',
                   children: (
                     <div>
                       <div className="flex justify-between">
                         <Text strong>{grn.grnNumber}</Text>
-                        <Text type="secondary">{dayjs(grn.receivedDate).format('DD/MM/YYYY')}</Text>
+                        <Text type="secondary">{dayjs(grn.receiveDate).format('DD/MM/YYYY')}</Text>
                       </div>
                       <div className="text-sm text-gray-500">
-                        {grn.items.length} item(s) received
+                        {grn.lineCount} item(s) received
                       </div>
-                      {grn.notes && <Text type="secondary">{grn.notes}</Text>}
                     </div>
                   ),
                 }))}

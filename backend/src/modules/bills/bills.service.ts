@@ -6,7 +6,11 @@ import {
   RecordBillPaymentDto,
   BillQueryDto,
   BillStatus,
+  CreateVendorCreditNoteDto,
+  ApplyVendorCreditNoteDto,
+  PaymentsMadeQueryDto,
 } from './dto/bill.dto';
+import { VendorCreditNoteStatus as PrismaVendorCreditNoteStatus } from '@prisma/client';
 
 @Injectable()
 export class BillsService {
@@ -355,5 +359,308 @@ export class BillsService {
       overdueCount,
       totalBills: bills.length,
     };
+  }
+
+  // Payments Made List
+  async findAllPayments(organizationId: string, query: PaymentsMadeQueryDto) {
+    const { page = 1, limit = 20, search, vendorId, paymentMethod, fromDate, toDate } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { organizationId };
+
+    if (search) {
+      where.OR = [
+        { paymentNumber: { contains: search, mode: 'insensitive' } },
+        { referenceNo: { contains: search, mode: 'insensitive' } },
+        { vendor: { companyName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (vendorId) {
+      where.vendorId = vendorId;
+    }
+
+    if (paymentMethod) {
+      where.paymentMethod = paymentMethod;
+    }
+
+    if (fromDate || toDate) {
+      where.paymentDate = {};
+      if (fromDate) where.paymentDate.gte = new Date(fromDate);
+      if (toDate) where.paymentDate.lte = new Date(toDate);
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.paymentMade.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { paymentDate: 'desc' },
+        include: {
+          vendor: true,
+          allocations: {
+            include: {
+              bill: true,
+            },
+          },
+        },
+      }),
+      this.prisma.paymentMade.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // Vendor Credit Notes
+  async createVendorCreditNote(organizationId: string, dto: CreateVendorCreditNoteDto) {
+    // Validate vendor exists
+    const vendor = await this.prisma.vendor.findFirst({
+      where: { id: dto.vendorId, organizationId },
+    });
+
+    if (!vendor) {
+      throw new NotFoundException('Vendor not found');
+    }
+
+    // Generate credit note number
+    const count = await this.prisma.vendorCreditNote.count({ where: { organizationId } });
+    const creditNoteNumber = `VCN-${String(count + 1).padStart(6, '0')}`;
+
+    // Calculate totals
+    let subtotal = 0;
+    let taxAmount = 0;
+
+    const linesWithTotals = dto.lines.map((line) => {
+      const lineSubtotal = line.unitPrice * line.quantity;
+      const lineTax = lineSubtotal * ((line.taxPct || 0) / 100);
+
+      subtotal += lineSubtotal;
+      taxAmount += lineTax;
+
+      return {
+        description: line.description,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        taxPct: line.taxPct || 0,
+        lineTotal: lineSubtotal + lineTax,
+      };
+    });
+
+    const total = subtotal + taxAmount;
+
+    return this.prisma.vendorCreditNote.create({
+      data: {
+        organizationId,
+        creditNoteNumber,
+        vendorId: dto.vendorId,
+        vendorCreditNoteNo: dto.vendorCreditNoteNo,
+        grnId: dto.grnId,
+        issueDate: dto.issueDate ? new Date(dto.issueDate) : new Date(),
+        reason: dto.reason,
+        notes: dto.notes,
+        status: 'DRAFT',
+        subtotal,
+        taxAmount,
+        total,
+        appliedAmount: 0,
+        lines: {
+          create: linesWithTotals,
+        },
+      },
+      include: {
+        vendor: true,
+        lines: true,
+      },
+    });
+  }
+
+  async findAllVendorCreditNotes(organizationId: string, query: { page?: number; limit?: number; vendorId?: string; status?: string }) {
+    const { page = 1, limit = 20, vendorId, status } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { organizationId };
+
+    if (vendorId) {
+      where.vendorId = vendorId;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.vendorCreditNote.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          vendor: true,
+          lines: true,
+        },
+      }),
+      this.prisma.vendorCreditNote.count({ where }),
+    ]);
+
+    return {
+      data: data.map((cn: any) => ({
+        ...cn,
+        balance: Number(cn.total) - Number(cn.appliedAmount),
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findOneVendorCreditNote(organizationId: string, id: string) {
+    const creditNote = await this.prisma.vendorCreditNote.findFirst({
+      where: { id, organizationId },
+      include: {
+        vendor: true,
+        lines: true,
+        applications: {
+          include: {
+            bill: true,
+          },
+        },
+      },
+    });
+
+    if (!creditNote) {
+      throw new NotFoundException('Vendor credit note not found');
+    }
+
+    return {
+      ...creditNote,
+      balance: Number(creditNote.total) - Number(creditNote.appliedAmount),
+    };
+  }
+
+  async issueVendorCreditNote(organizationId: string, id: string) {
+    const creditNote = await this.findOneVendorCreditNote(organizationId, id);
+
+    if (creditNote.status !== 'DRAFT') {
+      throw new BadRequestException('Can only issue draft credit notes');
+    }
+
+    return this.prisma.vendorCreditNote.update({
+      where: { id },
+      data: { status: 'ISSUED' },
+      include: {
+        vendor: true,
+        lines: true,
+      },
+    });
+  }
+
+  async applyVendorCreditNote(organizationId: string, creditNoteId: string, dto: ApplyVendorCreditNoteDto) {
+    const creditNote = await this.findOneVendorCreditNote(organizationId, creditNoteId);
+
+    if (!['ISSUED', 'PARTIALLY_APPLIED'].includes(creditNote.status)) {
+      throw new BadRequestException('Credit note must be issued before applying');
+    }
+
+    // Calculate available balance
+    const balance = Number(creditNote.total) - Number(creditNote.appliedAmount);
+
+    if (dto.amount > balance) {
+      throw new BadRequestException(`Amount exceeds available balance of ${balance}`);
+    }
+
+    // Validate bill exists and belongs to same vendor
+    const bill = await this.prisma.purchaseBill.findFirst({
+      where: { id: dto.billId, organizationId },
+    });
+
+    if (!bill) {
+      throw new NotFoundException('Bill not found');
+    }
+
+    if (bill.vendorId !== creditNote.vendorId) {
+      throw new BadRequestException('Bill must belong to the same vendor');
+    }
+
+    // Calculate bill balance
+    const billBalance = Number(bill.total) - Number(bill.amountPaid);
+
+    if (dto.amount > billBalance) {
+      throw new BadRequestException(`Amount exceeds bill balance of ${billBalance}`);
+    }
+
+    // Apply credit note
+    const newAppliedAmount = Number(creditNote.appliedAmount) + dto.amount;
+    const newBillAmountPaid = Number(bill.amountPaid) + dto.amount;
+    const newBalance = Number(creditNote.total) - newAppliedAmount;
+
+    let newStatus: PrismaVendorCreditNoteStatus = creditNote.status as PrismaVendorCreditNoteStatus;
+    if (newBalance <= 0) {
+      newStatus = PrismaVendorCreditNoteStatus.FULLY_APPLIED;
+    } else if (newAppliedAmount > 0) {
+      newStatus = PrismaVendorCreditNoteStatus.PARTIALLY_APPLIED;
+    }
+
+    // Determine bill status
+    let billStatus = bill.status;
+    if (newBillAmountPaid >= Number(bill.total)) {
+      billStatus = 'PAID';
+    } else if (newBillAmountPaid > 0) {
+      billStatus = 'PARTIALLY_PAID';
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.vendorCreditNoteApplication.create({
+        data: {
+          vendorCreditNoteId: creditNoteId,
+          billId: dto.billId,
+          amount: dto.amount,
+          notes: dto.notes,
+        },
+      }),
+      this.prisma.vendorCreditNote.update({
+        where: { id: creditNoteId },
+        data: {
+          appliedAmount: newAppliedAmount,
+          status: newStatus,
+        },
+      }),
+      this.prisma.purchaseBill.update({
+        where: { id: dto.billId },
+        data: {
+          amountPaid: newBillAmountPaid,
+          status: billStatus,
+        },
+      }),
+    ]);
+
+    return this.findOneVendorCreditNote(organizationId, creditNoteId);
+  }
+
+  async voidVendorCreditNote(organizationId: string, id: string) {
+    const creditNote = await this.findOneVendorCreditNote(organizationId, id);
+
+    if (['PARTIALLY_APPLIED', 'FULLY_APPLIED'].includes(creditNote.status)) {
+      throw new BadRequestException('Cannot void applied credit notes');
+    }
+
+    return this.prisma.vendorCreditNote.update({
+      where: { id },
+      data: { status: 'VOID' },
+      include: {
+        vendor: true,
+        lines: true,
+      },
+    });
   }
 }

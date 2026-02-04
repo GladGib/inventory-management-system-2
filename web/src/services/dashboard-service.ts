@@ -23,6 +23,7 @@ export interface LowStockItem {
   name: string;
   currentStock: number;
   reorderPoint: number;
+  uom?: string;
 }
 
 export const dashboardService = {

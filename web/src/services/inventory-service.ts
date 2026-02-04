@@ -13,6 +13,7 @@ export interface StockAdjustment {
   adjustmentDate: string;
   status: string;
   reason?: string;
+  notes?: string;
   lines: StockAdjustmentItem[];
   createdAt: string;
 }
@@ -180,6 +181,26 @@ export const inventoryService = {
 
   confirmTransfer: async (id: string): Promise<StockTransfer> => {
     const response = await apiClient.post<ApiResponse<StockTransfer>>(`/stock-transfers/${id}/confirm`);
+    return response.data.data;
+  },
+
+  shipTransfer: async (id: string): Promise<StockTransfer> => {
+    const response = await apiClient.post<ApiResponse<StockTransfer>>(`/stock-transfers/${id}/ship`);
+    return response.data.data;
+  },
+
+  completeTransfer: async (id: string): Promise<StockTransfer> => {
+    const response = await apiClient.post<ApiResponse<StockTransfer>>(`/stock-transfers/${id}/complete`);
+    return response.data.data;
+  },
+
+  receiveTransfer: async (id: string, items: { itemId: string; receivedQuantity: number }[]): Promise<StockTransfer> => {
+    const response = await apiClient.post<ApiResponse<StockTransfer>>(`/stock-transfers/${id}/receive`, { items });
+    return response.data.data;
+  },
+
+  cancelTransfer: async (id: string): Promise<StockTransfer> => {
+    const response = await apiClient.post<ApiResponse<StockTransfer>>(`/stock-transfers/${id}/cancel`);
     return response.data.data;
   },
 

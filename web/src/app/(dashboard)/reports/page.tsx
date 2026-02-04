@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   Table,
@@ -13,6 +14,7 @@ import {
   Statistic,
   Button,
   Spin,
+  Space,
 } from 'antd';
 import {
   DollarOutlined,
@@ -21,6 +23,8 @@ import {
   WarningOutlined,
   DownloadOutlined,
   RiseOutlined,
+  TeamOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { reportsService, ReportParams } from '@/services/reports-service';
@@ -32,6 +36,7 @@ const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 export default function ReportsPage() {
+  const router = useRouter();
   const [params, setParams] = useState<ReportParams>({
     fromDate: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
     toDate: dayjs().format('YYYY-MM-DD'),
@@ -158,6 +163,41 @@ export default function ReportsPage() {
       <div className="flex justify-between items-center mb-6">
         <Title level={4} className="mb-0">Reports</Title>
       </div>
+
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={12} md={8}>
+          <Card
+            hoverable
+            onClick={() => router.push('/reports/stock-valuation')}
+            className="cursor-pointer"
+          >
+            <Space>
+              <InboxOutlined className="text-2xl text-blue-500" />
+              <div className="flex-1">
+                <Text strong>Stock Valuation Report</Text>
+                <div className="text-sm text-gray-500">Detailed item-by-item stock value</div>
+              </div>
+              <RightOutlined className="text-gray-400" />
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card
+            hoverable
+            onClick={() => router.push('/reports/sales-by-customer')}
+            className="cursor-pointer"
+          >
+            <Space>
+              <TeamOutlined className="text-2xl text-green-500" />
+              <div className="flex-1">
+                <Text strong>Sales by Customer Report</Text>
+                <div className="text-sm text-gray-500">Revenue breakdown by customer</div>
+              </div>
+              <RightOutlined className="text-gray-400" />
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       <Card className="mb-6">
         <Row gutter={[16, 16]} align="middle">

@@ -160,3 +160,117 @@ export class BillQueryDto {
   @IsString()
   toDate?: string;
 }
+
+// Vendor Credit Note DTOs
+export class VendorCreditNoteLineDto {
+  @ApiProperty({ description: 'Line description' })
+  @IsString()
+  description: string;
+
+  @ApiProperty({ description: 'Quantity' })
+  @IsNumber()
+  @Min(1)
+  quantity: number;
+
+  @ApiProperty({ description: 'Unit price' })
+  @IsNumber()
+  @Min(0)
+  unitPrice: number;
+
+  @ApiPropertyOptional({ description: 'Tax percentage' })
+  @IsOptional()
+  @IsNumber()
+  taxPct?: number;
+}
+
+export class CreateVendorCreditNoteDto {
+  @ApiProperty({ description: 'Vendor ID' })
+  @IsString()
+  vendorId: string;
+
+  @ApiPropertyOptional({ description: 'Vendor credit note reference number' })
+  @IsOptional()
+  @IsString()
+  vendorCreditNoteNo?: string;
+
+  @ApiPropertyOptional({ description: 'Related GRN ID' })
+  @IsOptional()
+  @IsString()
+  grnId?: string;
+
+  @ApiPropertyOptional({ description: 'Issue date' })
+  @IsOptional()
+  @IsString()
+  issueDate?: string;
+
+  @ApiPropertyOptional({ description: 'Reason' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+
+  @ApiPropertyOptional({ description: 'Notes' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty({ description: 'Credit note lines', type: [VendorCreditNoteLineDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VendorCreditNoteLineDto)
+  lines: VendorCreditNoteLineDto[];
+}
+
+export class ApplyVendorCreditNoteDto {
+  @ApiProperty({ description: 'Bill ID to apply credit to' })
+  @IsString()
+  billId: string;
+
+  @ApiProperty({ description: 'Amount to apply' })
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @ApiPropertyOptional({ description: 'Notes' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class PaymentsMadeQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  page?: number = 1;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number = 20;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vendorId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  fromDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  toDate?: string;
+}

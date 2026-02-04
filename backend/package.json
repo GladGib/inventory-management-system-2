@@ -31,17 +31,27 @@
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/swagger": "^7.4.2",
     "@prisma/client": "^5.8.0",
+    "@types/multer": "^2.0.0",
+    "@types/nodemailer": "^7.0.9",
     "@types/pdfkit": "^0.17.4",
+    "@types/uuid": "^10.0.0",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.6",
+    "csv-parse": "^6.1.0",
+    "csv-stringify": "^6.6.0",
+    "handlebars": "^4.7.8",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.13",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.17.2",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.0",
@@ -85,6 +95,12 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1",
+      "^@modules/(.*)$": "<rootDir>/modules/$1",
+      "^@common/(.*)$": "<rootDir>/common/$1",
+      "^@config/(.*)$": "<rootDir>/config/$1"
+    }
   }
 }

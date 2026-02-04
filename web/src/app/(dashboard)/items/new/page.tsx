@@ -29,7 +29,7 @@ export default function NewItemPage() {
     <div>
       <Title level={4} className="mb-6">New Item</Title>
       <ItemForm
-        onSubmit={(values) => createMutation.mutate(values)}
+        onSubmit={(values) => createMutation.mutate(values as CreateItemRequest)}
         onCancel={() => router.push('/items')}
         loading={createMutation.isPending}
       />

@@ -47,19 +47,19 @@ const { Title, Text } = Typography;
 const statusColors: Record<InvoiceStatus, string> = {
   DRAFT: 'default',
   SENT: 'blue',
-  PARTIAL: 'orange',
+  PARTIALLY_PAID: 'orange',
   PAID: 'green',
   OVERDUE: 'red',
-  CANCELLED: 'default',
+  VOIDED: 'default',
 };
 
 const statusLabels: Record<InvoiceStatus, string> = {
   DRAFT: 'Draft',
   SENT: 'Sent',
-  PARTIAL: 'Partial',
+  PARTIALLY_PAID: 'Partial',
   PAID: 'Paid',
   OVERDUE: 'Overdue',
-  CANCELLED: 'Cancelled',
+  VOIDED: 'Voided',
 };
 
 const paymentMethods = [
@@ -290,7 +290,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
         <Col xs={24} lg={16}>
           <Card title="Invoice Items" className="mb-6">
             <Table
-              dataSource={invoice.items}
+              dataSource={invoice.lines}
               columns={itemColumns}
               rowKey="id"
               pagination={false}
@@ -305,17 +305,17 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                       {formatCurrency(invoice.subtotal)}
                     </Table.Summary.Cell>
                   </Table.Summary.Row>
-                  {invoice.discountAmount > 0 && (
+                  {(invoice.discountAmount ?? 0) > 0 && (
                     <Table.Summary.Row>
                       <Table.Summary.Cell index={0} colSpan={6} align="right">
                         <Text type="secondary">Discount:</Text>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="right" className="text-red-500">
-                        -{formatCurrency(invoice.discountAmount)}
+                        -{formatCurrency(invoice.discountAmount ?? 0)}
                       </Table.Summary.Cell>
                     </Table.Summary.Row>
                   )}
-                  {invoice.taxAmount > 0 && (
+                  {(invoice.taxAmount ?? 0) > 0 && (
                     <Table.Summary.Row>
                       <Table.Summary.Cell index={0} colSpan={6} align="right">
                         <Text type="secondary">Tax:</Text>
@@ -340,7 +340,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
                       <Text type="secondary">Paid:</Text>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right" className="text-green-600">
-                      {formatCurrency(invoice.paidAmount)}
+                      {formatCurrency(invoice.amountPaid)}
                     </Table.Summary.Cell>
                   </Table.Summary.Row>
                   <Table.Summary.Row>
@@ -383,20 +383,12 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
             </Card>
           )}
 
-          {(invoice.notes || invoice.terms) && (
-            <Card title="Notes & Terms" className="mb-6">
-              {invoice.notes && (
-                <div className="mb-4">
-                  <Text type="secondary">Notes:</Text>
-                  <div>{invoice.notes}</div>
-                </div>
-              )}
-              {invoice.terms && (
-                <div>
-                  <Text type="secondary">Terms & Conditions:</Text>
-                  <div>{invoice.terms}</div>
-                </div>
-              )}
+          {invoice.notes && (
+            <Card title="Notes" className="mb-6">
+              <div>
+                <Text type="secondary">Notes:</Text>
+                <div>{invoice.notes}</div>
+              </div>
             </Card>
           )}
         </Col>
@@ -453,7 +445,7 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
               </div>
               <div className="flex justify-between">
                 <Text>Paid:</Text>
-                <Text className="text-green-600">{formatCurrency(invoice.paidAmount)}</Text>
+                <Text className="text-green-600">{formatCurrency(invoice.amountPaid)}</Text>
               </div>
               <div className="flex justify-between border-t pt-3">
                 <Text strong>Balance Due:</Text>

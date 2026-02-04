@@ -186,6 +186,60 @@ export class SalesService {
     return this.toSalesOrderResponse(order);
   }
 
+  async getOrderForPdf(organizationId: string, id: string) {
+    const order = await this.prisma.salesOrder.findFirst({
+      where: { id, organizationId },
+      include: {
+        organization: true,
+        customer: true,
+        warehouse: true,
+        lines: {
+          include: { item: true },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Sales order not found');
+    }
+
+    return {
+      orderNumber: order.orderNumber,
+      orderDate: order.orderDate,
+      expectedDate: order.expectedShipDate || undefined,
+      organization: {
+        name: order.organization.name,
+        address: order.organization.address || undefined,
+        phone: order.organization.phone || undefined,
+        email: order.organization.email || undefined,
+      },
+      customer: {
+        companyName: order.customer.companyName,
+        phone: order.customer.phone || undefined,
+        email: order.customer.email || undefined,
+      },
+      warehouse: order.warehouse
+        ? {
+            name: order.warehouse.name,
+            address: order.warehouse.address || undefined,
+          }
+        : undefined,
+      lines: order.lines.map((line: any) => ({
+        itemCode: line.item.code,
+        itemName: line.item.name,
+        quantity: line.quantity,
+        unitPrice: Number(line.unitPrice),
+        discount: Number(line.discountPct) * Number(line.lineTotal) / 100,
+        lineTotal: Number(line.lineTotal),
+      })),
+      subtotal: Number(order.subtotal),
+      discountAmount: Number(order.discountAmount) || 0,
+      taxAmount: Number(order.taxAmount),
+      total: Number(order.total),
+      notes: order.notes || undefined,
+    };
+  }
+
   async update(
     organizationId: string,
     id: string,

@@ -76,19 +76,33 @@ export interface SalesOrdersListParams {
   toDate?: string;
 }
 
-export interface PickListItem {
+export interface PickListLine {
+  id: string;
   itemId: string;
   itemCode: string;
   itemName: string;
-  orderedQuantity: number;
-  pickedQuantity: number;
-  binLocation?: string;
+  orderedQty: number;
+  pickedQty: number;
+  binLocationId?: string;
+  binLocationCode?: string;
 }
 
 export interface PickList {
-  orderId: string;
+  id: string;
+  pickListNo: string;
+  salesOrderId: string;
   orderNumber: string;
-  items: PickListItem[];
+  warehouseId: string;
+  warehouseName: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  assignedTo?: string;
+  lines: PickListLine[];
+  createdAt: string;
+}
+
+export interface ProcessPickListItem {
+  lineId: string;
+  pickedQty: number;
 }
 
 export const salesService = {
@@ -126,13 +140,18 @@ export const salesService = {
     return response.data.data;
   },
 
-  getPickList: async (id: string): Promise<PickList> => {
-    const response = await apiClient.get<ApiResponse<PickList>>(`/sales-orders/${id}/pick-list`);
+  createPickList: async (orderId: string): Promise<PickList> => {
+    const response = await apiClient.post<ApiResponse<PickList>>(`/sales-orders/${orderId}/pick-list`);
     return response.data.data;
   },
 
-  processPickList: async (id: string, items: { itemId: string; pickedQuantity: number }[]): Promise<SalesOrder> => {
-    const response = await apiClient.post<ApiResponse<SalesOrder>>(`/sales-orders/${id}/process-pick-list`, { items });
+  getPickList: async (orderId: string): Promise<PickList> => {
+    const response = await apiClient.get<ApiResponse<PickList>>(`/sales-orders/${orderId}/pick-list`);
+    return response.data.data;
+  },
+
+  processPickList: async (pickListId: string, items: ProcessPickListItem[]): Promise<PickList> => {
+    const response = await apiClient.post<ApiResponse<PickList>>(`/pick-lists/${pickListId}/process`, { lines: items });
     return response.data.data;
   },
 

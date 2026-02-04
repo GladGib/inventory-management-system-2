@@ -46,19 +46,23 @@ const { RangePicker } = DatePicker;
 
 const statusColors: Record<PurchaseOrderStatus, string> = {
   DRAFT: 'default',
-  SENT: 'blue',
+  ISSUED: 'blue',
   CONFIRMED: 'cyan',
-  PARTIAL: 'orange',
+  PARTIALLY_RECEIVED: 'orange',
   RECEIVED: 'green',
+  BILLED: 'purple',
+  CLOSED: 'default',
   CANCELLED: 'red',
 };
 
 const statusLabels: Record<PurchaseOrderStatus, string> = {
   DRAFT: 'Draft',
-  SENT: 'Sent',
+  ISSUED: 'Issued',
   CONFIRMED: 'Confirmed',
-  PARTIAL: 'Partial',
+  PARTIALLY_RECEIVED: 'Partial',
   RECEIVED: 'Received',
+  BILLED: 'Billed',
+  CLOSED: 'Closed',
   CANCELLED: 'Cancelled',
 };
 
@@ -126,7 +130,7 @@ export default function PurchaseOrdersPage() {
   const handleDelete = (order: PurchaseOrder) => {
     modal.confirm({
       title: 'Delete Order',
-      content: `Are you sure you want to delete order "${order.orderNumber}"?`,
+      content: `Are you sure you want to delete order "${order.poNumber}"?`,
       okText: 'Delete',
       okButtonProps: { danger: true },
       onOk: () => deleteMutation.mutate(order.id),
@@ -136,7 +140,7 @@ export default function PurchaseOrdersPage() {
   const handleCancel = (order: PurchaseOrder) => {
     modal.confirm({
       title: 'Cancel Order',
-      content: `Are you sure you want to cancel order "${order.orderNumber}"?`,
+      content: `Are you sure you want to cancel order "${order.poNumber}"?`,
       okText: 'Cancel Order',
       okButtonProps: { danger: true },
       onOk: () => cancelMutation.mutate(order.id),
@@ -151,9 +155,9 @@ export default function PurchaseOrdersPage() {
   };
 
   const getReceivedPercent = (order: PurchaseOrder): number => {
-    if (!order.items || order.items.length === 0) return 0;
-    const totalOrdered = order.items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalReceived = order.items.reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
+    if (!order.lines || order.lines.length === 0) return 0;
+    const totalOrdered = order.lines.reduce((sum, item) => sum + item.quantity, 0);
+    const totalReceived = order.lines.reduce((sum, item) => sum + (item.quantityReceived || 0), 0);
     return totalOrdered > 0 ? Math.round((totalReceived / totalOrdered) * 100) : 0;
   };
 
@@ -190,7 +194,7 @@ export default function PurchaseOrdersPage() {
           onClick: () => handleDelete(record),
         }
       );
-    } else if (record.status === 'SENT') {
+    } else if (record.status === 'ISSUED') {
       items.push(
         {
           key: 'confirm',

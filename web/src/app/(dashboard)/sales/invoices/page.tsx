@@ -45,19 +45,19 @@ const { RangePicker } = DatePicker;
 const statusColors: Record<InvoiceStatus, string> = {
   DRAFT: 'default',
   SENT: 'blue',
-  PARTIAL: 'orange',
+  PARTIALLY_PAID: 'orange',
   PAID: 'green',
   OVERDUE: 'red',
-  CANCELLED: 'default',
+  VOIDED: 'default',
 };
 
 const statusLabels: Record<InvoiceStatus, string> = {
   DRAFT: 'Draft',
   SENT: 'Sent',
-  PARTIAL: 'Partial',
+  PARTIALLY_PAID: 'Partially Paid',
   PAID: 'Paid',
   OVERDUE: 'Overdue',
-  CANCELLED: 'Cancelled',
+  VOIDED: 'Voided',
 };
 
 export default function InvoicesPage() {
@@ -219,7 +219,7 @@ export default function InvoicesPage() {
       width: 150,
       render: (_, record: Invoice) => {
         const percent = record.totalAmount > 0
-          ? Math.round((record.paidAmount / record.totalAmount) * 100)
+          ? Math.round((record.amountPaid / record.totalAmount) * 100)
           : 0;
         return (
           <div>
@@ -227,7 +227,7 @@ export default function InvoicesPage() {
               percent={percent}
               size="small"
               status={record.status === 'PAID' ? 'success' : 'active'}
-              format={() => formatCurrency(record.paidAmount)}
+              format={() => formatCurrency(record.amountPaid)}
             />
           </div>
         );

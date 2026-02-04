@@ -522,6 +522,157 @@ export class ReportsService {
     };
   }
 
+  async getStockValuation(organizationId: string, query: ReportQueryDto) {
+    const { warehouseId, categoryId } = query;
+
+    const itemsWhere: any = { organizationId, isActive: true, deletedAt: null };
+    if (categoryId) itemsWhere.categoryId = categoryId;
+
+    const items = await this.prisma.item.findMany({
+      where: itemsWhere,
+      include: {
+        category: true,
+        stockLevels: warehouseId
+          ? { where: { warehouseId }, include: { warehouse: true } }
+          : { include: { warehouse: true } },
+      },
+      orderBy: { code: 'asc' },
+    });
+
+    let totalQuantity = 0;
+    let totalValue = 0;
+
+    const itemValuations = items.map((item: any) => {
+      const stockByWarehouse = item.stockLevels.map((sl: any) => ({
+        warehouseId: sl.warehouseId,
+        warehouseName: sl.warehouse?.name || 'Unknown',
+        quantity: sl.onHand,
+        value: sl.onHand * Number(item.costPrice),
+      }));
+
+      const totalStock = stockByWarehouse.reduce((sum: number, sl: any) => sum + sl.quantity, 0);
+      const itemValue = totalStock * Number(item.costPrice);
+
+      totalQuantity += totalStock;
+      totalValue += itemValue;
+
+      return {
+        itemId: item.id,
+        itemCode: item.code,
+        itemName: item.name,
+        categoryName: item.category?.name || 'Uncategorized',
+        unitCost: Number(item.costPrice),
+        totalQuantity: totalStock,
+        totalValue: itemValue,
+        stockByWarehouse,
+      };
+    });
+
+    return {
+      summary: {
+        totalItems: items.length,
+        totalQuantity,
+        totalValue,
+      },
+      items: itemValuations.filter((i: any) => i.totalQuantity > 0),
+    };
+  }
+
+  async getSalesByCustomer(organizationId: string, query: ReportQueryDto) {
+    const { fromDate, toDate } = query;
+
+    const dateFilter: any = {};
+    if (fromDate) dateFilter.gte = new Date(fromDate);
+    if (toDate) dateFilter.lte = new Date(toDate);
+
+    const where: any = {
+      organizationId,
+      status: { in: ['CONFIRMED', 'PICKING', 'PACKED', 'SHIPPED', 'INVOICED', 'CLOSED'] },
+    };
+
+    if (Object.keys(dateFilter).length > 0) {
+      where.orderDate = dateFilter;
+    }
+
+    const orders = await this.prisma.salesOrder.findMany({
+      where,
+      include: {
+        customer: true,
+        lines: {
+          include: {
+            item: true,
+          },
+        },
+      },
+    });
+
+    const customerData: Record<string, {
+      customer: any;
+      orderCount: number;
+      totalQuantity: number;
+      totalRevenue: number;
+      totalCost: number;
+      orders: any[];
+    }> = {};
+
+    orders.forEach((order: any) => {
+      if (!customerData[order.customerId]) {
+        customerData[order.customerId] = {
+          customer: order.customer,
+          orderCount: 0,
+          totalQuantity: 0,
+          totalRevenue: 0,
+          totalCost: 0,
+          orders: [],
+        };
+      }
+
+      const data = customerData[order.customerId];
+      data.orderCount++;
+      data.totalRevenue += Number(order.total);
+
+      order.lines.forEach((line: any) => {
+        data.totalQuantity += line.quantity;
+        data.totalCost += Number(line.item.costPrice) * line.quantity;
+      });
+
+      data.orders.push({
+        orderId: order.id,
+        orderNumber: order.orderNo,
+        orderDate: order.orderDate,
+        status: order.status,
+        total: Number(order.total),
+      });
+    });
+
+    const customers = Object.values(customerData)
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .map((c: any) => ({
+        customerId: c.customer.id,
+        customerCode: c.customer.code,
+        customerName: c.customer.companyName || c.customer.contactName,
+        orderCount: c.orderCount,
+        totalQuantity: c.totalQuantity,
+        totalRevenue: c.totalRevenue,
+        totalProfit: c.totalRevenue - c.totalCost,
+        averageOrderValue: c.orderCount > 0 ? c.totalRevenue / c.orderCount : 0,
+        recentOrders: c.orders.slice(0, 5),
+      }));
+
+    const totalRevenue = customers.reduce((sum, c) => sum + c.totalRevenue, 0);
+    const totalProfit = customers.reduce((sum, c) => sum + c.totalProfit, 0);
+
+    return {
+      summary: {
+        totalCustomers: customers.length,
+        totalOrders: orders.length,
+        totalRevenue,
+        totalProfit,
+      },
+      customers,
+    };
+  }
+
   async getDashboardStats(organizationId: string) {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

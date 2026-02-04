@@ -128,6 +128,40 @@ export class StockCountsController {
     return { data: count };
   }
 
+  @Get()
+  @ApiOperation({ summary: 'List stock counts' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'warehouseId', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Stock counts list' })
+  async findAll(
+    @CurrentUser('organizationId') orgId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.inventoryService.findAllStockCounts(orgId, {
+      page,
+      limit,
+      warehouseId,
+      status,
+    });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get stock count by ID' })
+  @ApiResponse({ status: 200, type: StockCountResponseDto })
+  @ApiResponse({ status: 404, description: 'Stock count not found' })
+  async findOne(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    const count = await this.inventoryService.findOneStockCount(orgId, id);
+    return { data: count };
+  }
+
   @Post(':id/record')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Record count entries' })

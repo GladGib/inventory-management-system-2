@@ -387,6 +387,68 @@ export class InventoryService {
   }
 
   // Stock Counts
+  async findAllStockCounts(
+    organizationId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      warehouseId?: string;
+      status?: string;
+    },
+  ) {
+    const page = options?.page || 1;
+    const limit = Math.min(options?.limit || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const where: any = { organizationId };
+
+    if (options?.warehouseId) {
+      where.warehouseId = options.warehouseId;
+    }
+
+    if (options?.status) {
+      where.status = options.status;
+    }
+
+    const [counts, total] = await Promise.all([
+      this.prisma.stockCount.findMany({
+        where,
+        include: {
+          warehouse: true,
+          lines: { include: { item: true } },
+        },
+        skip,
+        take: limit,
+        orderBy: { countDate: 'desc' },
+      }),
+      this.prisma.stockCount.count({ where }),
+    ]);
+
+    return {
+      data: counts.map((c: any) => this.toStockCountResponse(c)),
+      meta: { total, page, limit },
+    };
+  }
+
+  async findOneStockCount(
+    organizationId: string,
+    id: string,
+  ): Promise<StockCountResponseDto> {
+    const stockCount = await this.prisma.stockCount.findFirst({
+      where: { id, organizationId },
+      include: {
+        warehouse: true,
+        lines: { include: { item: true } },
+      },
+    });
+
+    if (!stockCount) {
+      throw new NotFoundException('Stock count not found');
+    }
+
+    return this.toStockCountResponse(stockCount);
+  }
+
   async createStockCount(
     organizationId: string,
     dto: CreateStockCountDto,

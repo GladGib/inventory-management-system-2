@@ -13,6 +13,7 @@ export interface InvoiceItem {
   unitPrice: number;
   discountPercent?: number;
   discountAmount?: number;
+  taxPercent?: number;
   lineTotal: number;
   taxAmount: number;
 }
@@ -99,6 +100,28 @@ export interface InvoicesListParams {
   toDate?: string;
 }
 
+export interface PaymentReceived {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  customerId: string;
+  customerName: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: string;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface PaymentsReceivedListParams {
+  page?: number;
+  limit?: number;
+  customerId?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
 export const invoicesService = {
   getInvoices: async (params?: InvoicesListParams): Promise<ApiListResponse<Invoice>> => {
     const response = await apiClient.get<ApiListResponse<Invoice>>('/invoices', { params });
@@ -147,5 +170,16 @@ export const invoicesService = {
   getPayments: async (id: string): Promise<Payment[]> => {
     const response = await apiClient.get<ApiResponse<Payment[]>>(`/invoices/${id}/payments`);
     return response.data.data;
+  },
+
+  getInvoicePdfUrl: (id: string): string => {
+    return `/invoices/${id}/pdf`;
+  },
+};
+
+export const paymentsReceivedService = {
+  getPaymentsReceived: async (params?: PaymentsReceivedListParams): Promise<ApiListResponse<PaymentReceived>> => {
+    const response = await apiClient.get<ApiListResponse<PaymentReceived>>('/payments-received', { params });
+    return response.data;
   },
 };

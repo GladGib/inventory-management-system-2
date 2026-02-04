@@ -12,6 +12,8 @@ export interface PurchaseOrderItem {
   quantity: number;
   quantityReceived: number;
   unitCost: number;
+  discountPercent?: number;
+  taxPercent?: number;
   lineTotal: number;
   notes?: string;
 }
@@ -30,6 +32,7 @@ export interface PurchaseOrder {
   expectedDate?: string;
   status: PurchaseOrderStatus;
   subtotal: number;
+  discountAmount?: number;
   taxAmount: number;
   totalAmount: number;
   notes?: string;
@@ -52,27 +55,61 @@ export interface CreateGRNRequest {
   lines: CreateGRNLineRequest[];
 }
 
+export type GRNStatus = 'DRAFT' | 'CONFIRMED';
+
+export interface GRNLine {
+  id: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  orderedQty?: number;
+  quantityReceived: number;
+  binLocationId?: string;
+  binLocationCode?: string;
+}
+
 export interface GoodsReceivedNote {
   id: string;
   grnNumber: string;
   purchaseOrderId: string;
   poNumber?: string;
+  vendorId?: string;
+  vendorCode?: string;
   vendorName?: string;
   receiveDate: string;
   warehouseId?: string;
   warehouseName?: string;
-  status: string;
+  status: GRNStatus;
   notes?: string;
-  lines: {
-    id: string;
-    itemId: string;
-    itemCode: string;
-    itemName: string;
-    quantityReceived: number;
-    binLocationId?: string;
-    binLocationCode?: string;
-  }[];
+  lines: GRNLine[];
   createdAt: string;
+}
+
+export interface GRNSummary {
+  id: string;
+  grnNumber: string;
+  purchaseOrderId?: string;
+  poNumber?: string;
+  vendorId: string;
+  vendorCode: string;
+  vendorName: string;
+  warehouseId?: string;
+  warehouseName?: string;
+  receiveDate: string;
+  status: GRNStatus;
+  lineCount: number;
+  createdAt: string;
+}
+
+export interface GRNListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: GRNStatus;
+  vendorId?: string;
+  purchaseOrderId?: string;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export interface CreatePurchaseOrderLineRequest {
@@ -160,14 +197,19 @@ export const purchasesService = {
     return response.data.data;
   },
 
-  getGRNs: async (id: string): Promise<GoodsReceivedNote[]> => {
-    // Note: There's no dedicated GET endpoint for GRNs - they come with the PO response
-    const response = await apiClient.get<ApiResponse<GoodsReceivedNote[]>>(`/purchase-orders/${id}/receive`);
+  getReorderSuggestions: async (): Promise<ReorderSuggestion[]> => {
+    const response = await apiClient.get<ApiResponse<ReorderSuggestion[]>>('/purchase-orders/reorder-suggestions');
     return response.data.data;
   },
 
-  getReorderSuggestions: async (): Promise<ReorderSuggestion[]> => {
-    const response = await apiClient.get<ApiResponse<ReorderSuggestion[]>>('/purchase-orders/reorder-suggestions');
+  // GRN endpoints
+  getGRNs: async (params?: GRNListParams): Promise<ApiListResponse<GRNSummary>> => {
+    const response = await apiClient.get<ApiListResponse<GRNSummary>>('/purchase-orders/grn', { params });
+    return response.data;
+  },
+
+  getGRN: async (id: string): Promise<GoodsReceivedNote> => {
+    const response = await apiClient.get<ApiResponse<GoodsReceivedNote>>(`/purchase-orders/grn/${id}`);
     return response.data.data;
   },
 };

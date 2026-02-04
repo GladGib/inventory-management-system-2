@@ -30,6 +30,8 @@ const menuItems: MenuItem[] = [
     children: [
       { key: '/sales/orders', label: 'Sales Orders' },
       { key: '/sales/invoices', label: 'Invoices' },
+      { key: '/sales/payments', label: 'Payments Received' },
+      { key: '/sales/returns', label: 'Sales Returns' },
     ],
   },
   {
@@ -38,6 +40,8 @@ const menuItems: MenuItem[] = [
     label: 'Purchases',
     children: [
       { key: '/purchases/orders', label: 'Purchase Orders' },
+      { key: '/purchases/receiving', label: 'Goods Received' },
+      { key: '/purchases/bills', label: 'Bills' },
     ],
   },
   {
@@ -52,6 +56,7 @@ const menuItems: MenuItem[] = [
       { key: '/inventory/movements', label: 'Stock Movements' },
       { key: '/inventory/adjustments', label: 'Stock Adjustments' },
       { key: '/inventory/transfers', label: 'Stock Transfers' },
+      { key: '/inventory/counts', label: 'Stock Counts' },
     ],
   },
   {
@@ -65,9 +70,14 @@ const menuItems: MenuItem[] = [
     label: 'Vendors',
   },
   {
-    key: '/reports',
+    key: 'reports',
     icon: <BarChartOutlined />,
     label: 'Reports',
+    children: [
+      { key: '/reports', label: 'Overview' },
+      { key: '/reports/stock-valuation', label: 'Stock Valuation' },
+      { key: '/reports/sales-by-customer', label: 'Sales by Customer' },
+    ],
   },
   {
     key: '/settings',

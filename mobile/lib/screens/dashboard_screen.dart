@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/warehouse_provider.dart';
 import '../core/theme.dart';
+import '../widgets/sync_status_widget.dart';
+import 'pick_list_screen.dart';
+import 'goods_receiving_screen.dart';
+import 'stock_count_screen.dart';
+import 'stock_adjustment_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -16,6 +21,7 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          const SyncStatusWidget(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -109,7 +115,7 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.qr_code_scanner,
                     color: AppTheme.primaryColor,
                     onTap: () {
-                      // Navigate to scan
+                      Navigator.pushNamed(context, '/scan');
                     },
                   ),
                   _QuickActionCard(
@@ -117,7 +123,10 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.checklist,
                     color: AppTheme.successColor,
                     onTap: () {
-                      // Navigate to picking
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PickListScreen()),
+                      );
                     },
                   ),
                   _QuickActionCard(
@@ -125,15 +134,21 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.move_to_inbox,
                     color: Colors.purple,
                     onTap: () {
-                      // Navigate to receiving
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const GoodsReceivingScreen()),
+                      );
                     },
                   ),
                   _QuickActionCard(
-                    title: 'Stock Adjust',
-                    icon: Icons.tune,
+                    title: 'Stock Count',
+                    icon: Icons.assignment,
                     color: AppTheme.warningColor,
                     onTap: () {
-                      // Navigate to adjustment
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StockCountScreen()),
+                      );
                     },
                   ),
                 ],

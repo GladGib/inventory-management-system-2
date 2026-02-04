@@ -12,13 +12,14 @@ interface BreadcrumbItem {
 }
 
 interface PageHeaderProps {
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   breadcrumbs?: BreadcrumbItem[];
   actions?: React.ReactNode;
+  extra?: React.ReactNode;
 }
 
-export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, breadcrumbs, actions, extra }: PageHeaderProps) {
   return (
     <div className="mb-6">
       {/* Breadcrumbs */}
@@ -58,9 +59,10 @@ export function PageHeader({ title, subtitle, breadcrumbs, actions }: PageHeader
             </Text>
           )}
         </div>
-        {actions && (
+        {(actions || extra) && (
           <Space className="flex-shrink-0">
             {actions}
+            {extra}
           </Space>
         )}
       </div>

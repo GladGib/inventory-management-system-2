@@ -18,6 +18,9 @@ import {
   UpdateBillDto,
   RecordBillPaymentDto,
   BillQueryDto,
+  CreateVendorCreditNoteDto,
+  ApplyVendorCreditNoteDto,
+  PaymentsMadeQueryDto,
 } from './dto/bill.dto';
 
 @ApiTags('Bills')
@@ -108,5 +111,88 @@ export class BillsController {
     @Param('id') id: string,
   ) {
     return this.billsService.delete(organizationId, id);
+  }
+}
+
+@ApiTags('Payments Made')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('payments-made')
+export class PaymentsMadeController {
+  constructor(private readonly billsService: BillsService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all payments made' })
+  findAll(
+    @CurrentUser('organizationId') organizationId: string,
+    @Query() query: PaymentsMadeQueryDto,
+  ) {
+    return this.billsService.findAllPayments(organizationId, query);
+  }
+}
+
+@ApiTags('Vendor Credit Notes')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('vendor-credit-notes')
+export class VendorCreditNotesController {
+  constructor(private readonly billsService: BillsService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create a vendor credit note' })
+  create(
+    @CurrentUser('organizationId') organizationId: string,
+    @Body() dto: CreateVendorCreditNoteDto,
+  ) {
+    return this.billsService.createVendorCreditNote(organizationId, dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all vendor credit notes' })
+  findAll(
+    @CurrentUser('organizationId') organizationId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('vendorId') vendorId?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.billsService.findAllVendorCreditNotes(organizationId, { page, limit, vendorId, status });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get vendor credit note by ID' })
+  findOne(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.billsService.findOneVendorCreditNote(organizationId, id);
+  }
+
+  @Post(':id/issue')
+  @ApiOperation({ summary: 'Issue vendor credit note' })
+  issue(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.billsService.issueVendorCreditNote(organizationId, id);
+  }
+
+  @Post(':id/apply')
+  @ApiOperation({ summary: 'Apply vendor credit note to bill' })
+  apply(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+    @Body() dto: ApplyVendorCreditNoteDto,
+  ) {
+    return this.billsService.applyVendorCreditNote(organizationId, id, dto);
+  }
+
+  @Post(':id/void')
+  @ApiOperation({ summary: 'Void vendor credit note' })
+  void(
+    @CurrentUser('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.billsService.voidVendorCreditNote(organizationId, id);
   }
 }

@@ -195,7 +195,7 @@ export default function StockTransfersPage() {
       fromWarehouseId: values.fromWarehouseId,
       toWarehouseId: values.toWarehouseId,
       notes: values.notes,
-      items: transferItems.map((item) => ({
+      lines: transferItems.map((item) => ({
         itemId: item.itemId,
         quantity: item.quantity,
       })),
@@ -213,7 +213,7 @@ export default function StockTransfersPage() {
   };
 
   const handleReceive = (transfer: StockTransfer) => {
-    const receiveItems = transfer.items.map((item) => ({
+    const receiveItems = transfer.lines.map((item) => ({
       itemId: item.itemId,
       receivedQuantity: item.quantity,
     }));
@@ -264,11 +264,11 @@ export default function StockTransfersPage() {
     },
     {
       title: 'Items',
-      dataIndex: 'items',
+      dataIndex: 'lines',
       key: 'itemCount',
       width: 80,
       align: 'center',
-      render: (items: StockTransfer['items']) => items?.length || 0,
+      render: (lines: StockTransfer['lines']) => lines?.length || 0,
     },
     {
       title: 'Status',
@@ -508,7 +508,7 @@ export default function StockTransfersPage() {
             </Descriptions>
 
             <Table
-              dataSource={viewingTransfer.items}
+              dataSource={viewingTransfer.lines}
               columns={[
                 {
                   title: 'Item',

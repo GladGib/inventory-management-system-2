@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { ReportsController, DashboardController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { PrismaModule } from '../../common/prisma/prisma.module';
+import { PdfModule } from '../../common/pdf/pdf.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, PdfModule],
   controllers: [ReportsController, DashboardController],
   providers: [ReportsService],
   exports: [ReportsService],
