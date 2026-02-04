@@ -17,7 +17,6 @@ import {
 } from 'antd';
 import {
   ArrowLeftOutlined,
-  DownloadOutlined,
   TeamOutlined,
   DollarOutlined,
   ShoppingCartOutlined,
@@ -31,9 +30,10 @@ import {
 } from '@/services/reports-service';
 import type { ColumnsType } from 'antd/es/table';
 import { PageHeader } from '@/components/ui';
+import { ExportButtons } from '@/components/reports/export-buttons';
 import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const statusColors: Record<string, string> = {
@@ -189,9 +189,14 @@ export default function SalesByCustomerReportPage() {
           </Space>
         }
         extra={
-          <Button icon={<DownloadOutlined />}>
-            Export to Excel
-          </Button>
+          <ExportButtons
+            exportEndpoint="/reports/sales-by-customer/export"
+            params={{
+              fromDate: params.fromDate,
+              toDate: params.toDate,
+            }}
+            filename="sales-by-customer-report"
+          />
         }
       />
 

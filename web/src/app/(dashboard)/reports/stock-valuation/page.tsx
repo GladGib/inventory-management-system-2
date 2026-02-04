@@ -16,7 +16,6 @@ import {
 } from 'antd';
 import {
   ArrowLeftOutlined,
-  DownloadOutlined,
   InboxOutlined,
   DollarOutlined,
 } from '@ant-design/icons';
@@ -30,8 +29,9 @@ import { warehousesService } from '@/services/warehouses-service';
 import { itemsService } from '@/services/items-service';
 import type { ColumnsType } from 'antd/es/table';
 import { PageHeader } from '@/components/ui';
+import { ExportButtons } from '@/components/reports/export-buttons';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 export default function StockValuationReportPage() {
   const router = useRouter();
@@ -158,9 +158,14 @@ export default function StockValuationReportPage() {
           </Space>
         }
         extra={
-          <Button icon={<DownloadOutlined />}>
-            Export to Excel
-          </Button>
+          <ExportButtons
+            exportEndpoint="/reports/stock-valuation/export"
+            params={{
+              warehouseId: params.warehouseId,
+              categoryId: params.categoryId,
+            }}
+            filename="stock-valuation-report"
+          />
         }
       />
 

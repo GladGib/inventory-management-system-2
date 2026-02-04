@@ -28,6 +28,8 @@ import {
   SendOutlined,
   DollarOutlined,
   CloseCircleOutlined,
+  RollbackOutlined,
+  MailOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -117,6 +119,25 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
       message.error(error.response?.data?.error?.message || 'Failed to record payment');
     },
   });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: () => invoicesService.sendEmail(id),
+    onSuccess: () => {
+      message.success('Invoice email sent successfully');
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to send email');
+    },
+  });
+
+  const handleSendEmail = () => {
+    modal.confirm({
+      title: 'Send Invoice Email',
+      content: `Send invoice "${invoice?.invoiceNumber}" via email to ${invoice?.customer?.email}?`,
+      okText: 'Send Email',
+      onOk: () => sendEmailMutation.mutate(),
+    });
+  };
 
   const handleSend = () => {
     modal.confirm({
@@ -270,6 +291,23 @@ export default function InvoiceDetailPage({ params }: { params: { id: string } }
               onClick={handleOpenPaymentModal}
             >
               Record Payment
+            </Button>
+          )}
+          {['SENT', 'PARTIALLY_PAID', 'PAID'].includes(invoice.status) && (
+            <Button
+              icon={<RollbackOutlined />}
+              onClick={() => router.push(`/sales/returns/new?invoiceId=${id}`)}
+            >
+              Create Return
+            </Button>
+          )}
+          {invoice.customer?.email && !['DRAFT', 'VOIDED'].includes(invoice.status) && (
+            <Button
+              icon={<MailOutlined />}
+              onClick={handleSendEmail}
+              loading={sendEmailMutation.isPending}
+            >
+              Send Email
             </Button>
           )}
           {!['PAID', 'CANCELLED'].includes(invoice.status) && (

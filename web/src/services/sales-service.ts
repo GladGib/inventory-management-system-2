@@ -105,6 +105,46 @@ export interface ProcessPickListItem {
   pickedQty: number;
 }
 
+export type ShipmentStatus = 'PENDING' | 'SHIPPED' | 'DELIVERED';
+
+export interface ShipmentLine {
+  id: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface Shipment {
+  id: string;
+  shipmentNumber: string;
+  salesOrderId: string;
+  orderNumber: string;
+  status: ShipmentStatus;
+  carrier?: string;
+  trackingNumber?: string;
+  shipDate?: string;
+  deliveredDate?: string;
+  notes?: string;
+  lines: ShipmentLine[];
+  createdAt: string;
+}
+
+export interface CreateShipmentLineRequest {
+  itemId: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface CreateShipmentRequest {
+  carrier?: string;
+  trackingNumber?: string;
+  shipDate?: string;
+  notes?: string;
+  lines: CreateShipmentLineRequest[];
+}
+
 export const salesService = {
   getSalesOrders: async (params?: SalesOrdersListParams): Promise<ApiListResponse<SalesOrder>> => {
     const response = await apiClient.get<ApiListResponse<SalesOrder>>('/sales-orders', { params });
@@ -163,5 +203,35 @@ export const salesService = {
   deliverOrder: async (id: string): Promise<SalesOrder> => {
     const response = await apiClient.post<ApiResponse<SalesOrder>>(`/sales-orders/${id}/deliver`);
     return response.data.data;
+  },
+
+  // Shipments
+  getShipments: async (orderId: string): Promise<Shipment[]> => {
+    const response = await apiClient.get<ApiResponse<Shipment[]>>(`/sales-orders/${orderId}/shipments`);
+    return response.data.data;
+  },
+
+  createShipment: async (orderId: string, data: CreateShipmentRequest): Promise<Shipment> => {
+    const response = await apiClient.post<ApiResponse<Shipment>>(`/sales-orders/${orderId}/shipments`, data);
+    return response.data.data;
+  },
+
+  getShipment: async (shipmentId: string): Promise<Shipment> => {
+    const response = await apiClient.get<ApiResponse<Shipment>>(`/shipments/${shipmentId}`);
+    return response.data.data;
+  },
+
+  markShipmentDelivered: async (shipmentId: string): Promise<Shipment> => {
+    const response = await apiClient.post<ApiResponse<Shipment>>(`/shipments/${shipmentId}/deliver`);
+    return response.data.data;
+  },
+
+  // PDF URLs
+  getOrderPdfUrl: (orderId: string): string => {
+    return `${apiClient.defaults.baseURL}/sales-orders/${orderId}/pdf`;
+  },
+
+  getDeliveryOrderPdfUrl: (shipmentId: string): string => {
+    return `${apiClient.defaults.baseURL}/shipments/${shipmentId}/delivery-order`;
   },
 };

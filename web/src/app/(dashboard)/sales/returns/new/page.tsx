@@ -110,10 +110,12 @@ export default function NewSalesReturnPage() {
       const invoice = invoiceData || await invoicesService.getInvoice(invoiceId);
       setSelectedInvoice(invoice);
 
+      // Set both customerId and invoiceId in the form
       if (!selectedCustomerId && invoice.customerId) {
         setSelectedCustomerId(invoice.customerId);
         form.setFieldValue('customerId', invoice.customerId);
       }
+      form.setFieldValue('invoiceId', invoice.id);
 
       // Initialize return items from invoice lines
       const returnItems: ReturnLineItem[] = invoice.lines.map((line) => ({

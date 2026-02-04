@@ -98,6 +98,53 @@ export interface ProcessRefundRequest {
   notes?: string;
 }
 
+export type ItemCondition = 'RESELLABLE' | 'DAMAGED' | 'DEFECTIVE';
+
+export interface InspectItemRequest {
+  itemId: string;
+  inspectedQuantity: number;
+  condition: ItemCondition;
+  notes?: string;
+}
+
+export interface CompleteInspectionRequest {
+  items: InspectItemRequest[];
+  warehouseId?: string;
+  notes?: string;
+}
+
+export interface CreditNote {
+  id: string;
+  creditNoteNumber: string;
+  salesReturnId: string;
+  returnNumber: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  creditNoteDate: string;
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: 'DRAFT' | 'ISSUED' | 'APPLIED' | 'VOIDED';
+  notes?: string;
+  lines: CreditNoteLine[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditNoteLine {
+  id: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  condition: ItemCondition;
+}
+
 export const salesReturnsService = {
   getReturns: async (params?: SalesReturnListParams): Promise<ApiListResponse<SalesReturnSummary>> => {
     const response = await apiClient.get<ApiListResponse<SalesReturnSummary>>('/sales-returns', { params });
@@ -142,6 +189,29 @@ export const salesReturnsService = {
     const response = await apiClient.post<ApiResponse<SalesReturn>>(`/sales-returns/${id}/refund`, data);
     return response.data.data;
   },
+
+  completeInspection: async (id: string, data: CompleteInspectionRequest): Promise<SalesReturn> => {
+    const response = await apiClient.post<ApiResponse<SalesReturn>>(`/sales-returns/${id}/inspect`, data);
+    return response.data.data;
+  },
+
+  generateCreditNote: async (id: string): Promise<CreditNote> => {
+    const response = await apiClient.post<ApiResponse<CreditNote>>(`/sales-returns/${id}/credit-note`);
+    return response.data.data;
+  },
+
+  getCreditNote: async (id: string): Promise<CreditNote | null> => {
+    try {
+      const response = await apiClient.get<ApiResponse<CreditNote>>(`/sales-returns/${id}/credit-note`);
+      return response.data.data;
+    } catch {
+      return null;
+    }
+  },
+
+  getCreditNotePdfUrl: (id: string): string => {
+    return `/sales-returns/${id}/credit-note/pdf`;
+  },
 };
 
 export const returnReasonLabels: Record<ReturnReason, string> = {
@@ -167,4 +237,16 @@ export const returnStatusColors: Record<ReturnStatus, string> = {
   APPROVED: 'cyan',
   COMPLETED: 'green',
   CANCELLED: 'red',
+};
+
+export const itemConditionLabels: Record<ItemCondition, string> = {
+  RESELLABLE: 'Resellable',
+  DAMAGED: 'Damaged',
+  DEFECTIVE: 'Defective',
+};
+
+export const itemConditionColors: Record<ItemCondition, string> = {
+  RESELLABLE: 'green',
+  DAMAGED: 'orange',
+  DEFECTIVE: 'red',
 };

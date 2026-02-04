@@ -13,10 +13,12 @@ import {
   Tag,
   Statistic,
   Button,
+  Input,
 } from 'antd';
 import {
   DollarOutlined,
   EyeOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -36,6 +38,7 @@ const paymentMethodColors: Record<string, string> = {
   BANK_TRANSFER: 'blue',
   CHEQUE: 'orange',
   CREDIT_CARD: 'purple',
+  E_WALLET: 'cyan',
   OTHER: 'default',
 };
 
@@ -44,16 +47,27 @@ const paymentMethodLabels: Record<string, string> = {
   BANK_TRANSFER: 'Bank Transfer',
   CHEQUE: 'Cheque',
   CREDIT_CARD: 'Credit Card',
+  E_WALLET: 'E-Wallet',
   OTHER: 'Other',
 };
 
+const paymentMethodOptions = Object.entries(paymentMethodLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
+
 export default function PaymentsReceivedPage() {
   const router = useRouter();
+  const [searchText, setSearchText] = useState('');
 
   const [params, setParams] = useState<PaymentsReceivedListParams>({
     page: 1,
     limit: 20,
   });
+
+  const handleSearch = () => {
+    setParams((prev) => ({ ...prev, search: searchText, page: 1 }));
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['payments-received', params],
@@ -176,7 +190,21 @@ export default function PaymentsReceivedPage() {
 
       <Card>
         <Row gutter={[16, 16]} className="mb-4">
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6}>
+            <Input
+              placeholder="Search by invoice #, customer, reference..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onPressEnter={handleSearch}
+              allowClear
+              onClear={() => {
+                setSearchText('');
+                setParams((prev) => ({ ...prev, search: undefined, page: 1 }));
+              }}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={5}>
             <Select
               placeholder="Filter by Customer"
               allowClear
@@ -190,9 +218,19 @@ export default function PaymentsReceivedPage() {
               }))}
             />
           </Col>
-          <Col xs={24} md={10}>
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              placeholder="Payment Method"
+              allowClear
+              className="w-full"
+              onChange={(value) => setParams((prev) => ({ ...prev, paymentMethod: value, page: 1 }))}
+              options={paymentMethodOptions}
+            />
+          </Col>
+          <Col xs={24} md={7}>
             <RangePicker
               className="w-full"
+              format="DD/MM/YYYY"
               onChange={(dates) => {
                 setParams((prev) => ({
                   ...prev,
@@ -202,6 +240,9 @@ export default function PaymentsReceivedPage() {
                 }));
               }}
             />
+          </Col>
+          <Col>
+            <Button onClick={handleSearch}>Search</Button>
           </Col>
         </Row>
 

@@ -197,7 +197,7 @@ export default function StockCountsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <Title level={4} className="mb-0">Stock Counts</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenModal}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => router.push('/inventory/counts/new')}>
           New Count
         </Button>
       </div>

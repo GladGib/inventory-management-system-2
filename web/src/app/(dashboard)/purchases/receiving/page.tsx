@@ -25,6 +25,7 @@ import {
   PrinterOutlined,
   MoreOutlined,
   FileTextOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { PageHeader } from '@/components/ui';
@@ -188,6 +189,15 @@ export default function GoodsReceivedPage() {
       <PageHeader
         title="Goods Received"
         subtitle="Track incoming inventory from purchase orders"
+        actions={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push('/purchases/receiving/new')}
+          >
+            New GRN
+          </Button>
+        }
       />
 
       <Card>

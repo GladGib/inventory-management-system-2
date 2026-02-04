@@ -20,7 +20,11 @@ import {
   Form,
   Input,
   Alert,
+  Timeline,
+  Tooltip,
+  Dropdown,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   ArrowLeftOutlined,
   EditOutlined,
@@ -31,11 +35,26 @@ import {
   FileTextOutlined,
   UnorderedListOutlined,
   DownloadOutlined,
+  EyeOutlined,
+  FilePdfOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { salesService, SalesOrder, SalesOrderStatus, SalesOrderItem, PickList, PickListLine, ProcessPickListItem } from '@/services/sales-service';
+import {
+  salesService,
+  SalesOrder,
+  SalesOrderStatus,
+  SalesOrderItem,
+  PickList,
+  PickListLine,
+  ProcessPickListItem,
+  Shipment,
+  ShipmentStatus,
+} from '@/services/sales-service';
 import { invoicesService } from '@/services/invoices-service';
+import { apiClient } from '@/lib/api-client';
+import { CreateShipmentModal } from '@/components/shipments';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
@@ -59,6 +78,18 @@ const statusLabels: Record<SalesOrderStatus, string> = {
   CANCELLED: 'Cancelled',
 };
 
+const shipmentStatusColors: Record<ShipmentStatus, string> = {
+  PENDING: 'default',
+  SHIPPED: 'blue',
+  DELIVERED: 'green',
+};
+
+const shipmentStatusLabels: Record<ShipmentStatus, string> = {
+  PENDING: 'Pending',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+};
+
 const getStatusStep = (status: SalesOrderStatus): number => {
   const steps: SalesOrderStatus[] = ['DRAFT', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
   return steps.indexOf(status);
@@ -69,15 +100,21 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
   const router = useRouter();
   const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
-  const [shipForm] = Form.useForm();
 
   const [pickListModalOpen, setPickListModalOpen] = useState(false);
-  const [shipmentModalOpen, setShipmentModalOpen] = useState(false);
+  const [createShipmentModalOpen, setCreateShipmentModalOpen] = useState(false);
+  const [pdfPreviewModalOpen, setPdfPreviewModalOpen] = useState(false);
   const [pickEntries, setPickEntries] = useState<Record<string, number>>({});
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['sales-order', id],
     queryFn: () => salesService.getSalesOrder(id),
+  });
+
+  const { data: shipments, refetch: refetchShipments } = useQuery({
+    queryKey: ['shipments', id],
+    queryFn: () => salesService.getShipments(id),
+    enabled: !!order && !['DRAFT'].includes(order.status),
   });
 
   const confirmMutation = useMutation({
@@ -102,18 +139,6 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
     },
   });
 
-  const shipMutation = useMutation({
-    mutationFn: () => salesService.shipOrder(id),
-    onSuccess: () => {
-      message.success('Order marked as shipped');
-      queryClient.invalidateQueries({ queryKey: ['sales-order', id] });
-      setShipmentModalOpen(false);
-    },
-    onError: (error: any) => {
-      message.error(error.response?.data?.error?.message || 'Failed to ship order');
-    },
-  });
-
   const deliverMutation = useMutation({
     mutationFn: () => salesService.deliverOrder(id),
     onSuccess: () => {
@@ -133,6 +158,18 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
     },
     onError: (error: any) => {
       message.error(error.response?.data?.error?.message || 'Failed to create invoice');
+    },
+  });
+
+  const markShipmentDeliveredMutation = useMutation({
+    mutationFn: (shipmentId: string) => salesService.markShipmentDelivered(shipmentId),
+    onSuccess: () => {
+      message.success('Shipment marked as delivered');
+      queryClient.invalidateQueries({ queryKey: ['sales-order', id] });
+      refetchShipments();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to mark shipment as delivered');
     },
   });
 
@@ -190,15 +227,6 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
     processPickListMutation.mutate(items);
   };
 
-  const handleOpenShipment = () => {
-    shipForm.resetFields();
-    setShipmentModalOpen(true);
-  };
-
-  const handleShipOrder = (values: any) => {
-    shipMutation.mutate();
-  };
-
   const handleConfirm = () => {
     modal.confirm({
       title: 'Confirm Order',
@@ -218,15 +246,6 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
     });
   };
 
-  const handleShip = () => {
-    modal.confirm({
-      title: 'Ship Order',
-      content: 'Mark this order as shipped?',
-      okText: 'Ship',
-      onOk: () => shipMutation.mutate(),
-    });
-  };
-
   const handleDeliver = () => {
     modal.confirm({
       title: 'Mark as Delivered',
@@ -234,6 +253,54 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
       okText: 'Confirm Delivery',
       onOk: () => deliverMutation.mutate(),
     });
+  };
+
+  const handleShipmentCreated = () => {
+    message.success('Shipment created successfully');
+    queryClient.invalidateQueries({ queryKey: ['sales-order', id] });
+    refetchShipments();
+  };
+
+  const handleDownloadOrderPdf = async () => {
+    try {
+      const response = await apiClient.get(`/sales-orders/${id}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sales-order-${order?.orderNumber || id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      message.error('Failed to download PDF');
+    }
+  };
+
+  const handlePreviewOrderPdf = () => {
+    setPdfPreviewModalOpen(true);
+  };
+
+  const handleDownloadDeliveryOrder = async (shipmentId: string, shipmentNumber: string) => {
+    try {
+      const response = await apiClient.get(`/shipments/${shipmentId}/delivery-order`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `DO-${shipmentNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      message.error('Failed to download delivery order');
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -266,6 +333,22 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
       key: 'quantity',
       width: 80,
       align: 'center',
+    },
+    {
+      title: 'Shipped',
+      key: 'shipped',
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        const shipped = record.quantityShipped || 0;
+        const total = record.quantity;
+        const color = shipped >= total ? 'green' : shipped > 0 ? 'orange' : 'default';
+        return (
+          <Tag color={color}>
+            {shipped}/{total}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Unit Price',
@@ -301,6 +384,35 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
     },
   ];
 
+  const getShipmentActions = (shipment: Shipment): MenuProps['items'] => {
+    const items: MenuProps['items'] = [
+      {
+        key: 'download-do',
+        label: 'Download Delivery Order',
+        icon: <DownloadOutlined />,
+        onClick: () => handleDownloadDeliveryOrder(shipment.id, shipment.shipmentNumber),
+      },
+    ];
+
+    if (shipment.status === 'SHIPPED') {
+      items.push({
+        key: 'mark-delivered',
+        label: 'Mark as Delivered',
+        icon: <CheckCircleOutlined />,
+        onClick: () => {
+          modal.confirm({
+            title: 'Mark as Delivered',
+            content: `Mark shipment ${shipment.shipmentNumber} as delivered?`,
+            okText: 'Confirm',
+            onOk: () => markShipmentDeliveredMutation.mutate(shipment.id),
+          });
+        },
+      });
+    }
+
+    return items;
+  };
+
   if (isLoading) {
     return (
       <div>
@@ -314,6 +426,10 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
   }
 
   const isCancelled = order.status === 'CANCELLED';
+  const canCreateShipment = ['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(order.status);
+  const hasUnshippedItems = order.lines.some(
+    (line) => (line.quantityShipped || 0) < line.quantity
+  );
 
   return (
     <div>
@@ -356,11 +472,11 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
               {pickList ? 'View Pick List' : 'Create Pick List'}
             </Button>
           )}
-          {order.status === 'CONFIRMED' && (
+          {canCreateShipment && hasUnshippedItems && (
             <Button
               type="primary"
               icon={<TruckOutlined />}
-              onClick={handleOpenShipment}
+              onClick={() => setCreateShipmentModalOpen(true)}
             >
               Create Shipment
             </Button>
@@ -385,7 +501,12 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
               Cancel
             </Button>
           )}
-          <Button icon={<PrinterOutlined />}>Print</Button>
+          <Tooltip title="Preview PDF">
+            <Button icon={<EyeOutlined />} onClick={handlePreviewOrderPdf} />
+          </Tooltip>
+          <Tooltip title="Download PDF">
+            <Button icon={<DownloadOutlined />} onClick={handleDownloadOrderPdf} />
+          </Tooltip>
           <Button
             icon={<FileTextOutlined />}
             onClick={() => createInvoiceMutation.mutate()}
@@ -423,7 +544,7 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
               summary={() => (
                 <>
                   <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={6} align="right">
+                    <Table.Summary.Cell index={0} colSpan={7} align="right">
                       <Text strong>Subtotal:</Text>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
@@ -432,7 +553,7 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
                   </Table.Summary.Row>
                   {(order.discountAmount ?? 0) > 0 && (
                     <Table.Summary.Row>
-                      <Table.Summary.Cell index={0} colSpan={6} align="right">
+                      <Table.Summary.Cell index={0} colSpan={7} align="right">
                         <Text type="secondary">Discount:</Text>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="right" className="text-red-500">
@@ -442,7 +563,7 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
                   )}
                   {order.taxAmount > 0 && (
                     <Table.Summary.Row>
-                      <Table.Summary.Cell index={0} colSpan={6} align="right">
+                      <Table.Summary.Cell index={0} colSpan={7} align="right">
                         <Text type="secondary">Tax:</Text>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="right">
@@ -451,7 +572,7 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
                     </Table.Summary.Row>
                   )}
                   <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={6} align="right">
+                    <Table.Summary.Cell index={0} colSpan={7} align="right">
                       <Title level={5} className="mb-0">Grand Total:</Title>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
@@ -464,6 +585,60 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
               )}
             />
           </Card>
+
+          {/* Shipments History Card */}
+          {shipments && shipments.length > 0 && (
+            <Card title="Shipments" className="mb-6">
+              <Timeline
+                items={shipments.map((shipment) => ({
+                  color: shipment.status === 'DELIVERED' ? 'green' : 'blue',
+                  children: (
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Text strong>{shipment.shipmentNumber}</Text>
+                          <Tag color={shipmentStatusColors[shipment.status]}>
+                            {shipmentStatusLabels[shipment.status]}
+                          </Tag>
+                        </div>
+                        <div className="text-xs text-gray-500 mb-2">
+                          {shipment.shipDate
+                            ? `Shipped: ${dayjs(shipment.shipDate).format('DD/MM/YYYY')}`
+                            : 'Not shipped yet'}
+                          {shipment.deliveredDate &&
+                            ` | Delivered: ${dayjs(shipment.deliveredDate).format('DD/MM/YYYY')}`}
+                        </div>
+                        {shipment.carrier && (
+                          <div className="text-sm">
+                            <Text type="secondary">Carrier:</Text> {shipment.carrier}
+                          </div>
+                        )}
+                        {shipment.trackingNumber && (
+                          <div className="text-sm">
+                            <Text type="secondary">Tracking:</Text>{' '}
+                            <span className="font-mono">{shipment.trackingNumber}</span>
+                          </div>
+                        )}
+                        <div className="mt-2">
+                          <Text type="secondary" className="text-xs">Items:</Text>
+                          <div className="text-sm">
+                            {shipment.lines.map((line) => (
+                              <div key={line.id} className="text-gray-600">
+                                {line.itemCode} - {line.itemName} x {line.quantity}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <Dropdown menu={{ items: getShipmentActions(shipment) }} trigger={['click']}>
+                        <Button type="text" icon={<MoreOutlined />} size="small" />
+                      </Dropdown>
+                    </div>
+                  ),
+                }))}
+              />
+            </Card>
+          )}
 
           {order.notes && (
             <Card title="Notes" className="mb-6">
@@ -622,48 +797,38 @@ export default function SalesOrderDetailPage({ params }: { params: { id: string 
         )}
       </Modal>
 
-      {/* Shipment Modal */}
+      {/* Create Shipment Modal */}
+      {order && (
+        <CreateShipmentModal
+          open={createShipmentModalOpen}
+          order={order}
+          onClose={() => setCreateShipmentModalOpen(false)}
+          onSuccess={handleShipmentCreated}
+        />
+      )}
+
+      {/* PDF Preview Modal */}
       <Modal
-        title="Create Shipment"
-        open={shipmentModalOpen}
-        onCancel={() => setShipmentModalOpen(false)}
-        footer={null}
+        title={`Sales Order - ${order.orderNumber}`}
+        open={pdfPreviewModalOpen}
+        onCancel={() => setPdfPreviewModalOpen(false)}
+        width={900}
+        footer={
+          <Space>
+            <Button onClick={() => setPdfPreviewModalOpen(false)}>Close</Button>
+            <Button type="primary" icon={<DownloadOutlined />} onClick={handleDownloadOrderPdf}>
+              Download PDF
+            </Button>
+          </Space>
+        }
       >
-        <Form form={shipForm} layout="vertical" onFinish={handleShipOrder}>
-          <Form.Item name="trackingNumber" label="Tracking Number (Optional)">
-            <Input placeholder="Enter tracking number" />
-          </Form.Item>
-
-          <Form.Item name="carrier" label="Carrier (Optional)">
-            <Input placeholder="e.g., Pos Laju, J&T, DHL" />
-          </Form.Item>
-
-          <Form.Item name="notes" label="Shipping Notes">
-            <Input.TextArea rows={2} placeholder="Optional notes" />
-          </Form.Item>
-
-          <Alert
-            type="warning"
-            message="This will mark the order as shipped"
-            description="Make sure all items have been picked and packed before creating the shipment."
-            className="mb-4"
-            showIcon
+        <div className="h-[70vh]">
+          <iframe
+            src={`${apiClient.defaults.baseURL}/sales-orders/${id}/pdf`}
+            className="w-full h-full border-0"
+            title="Sales Order PDF Preview"
           />
-
-          <Form.Item className="mb-0">
-            <Space className="w-full justify-end">
-              <Button onClick={() => setShipmentModalOpen(false)}>Cancel</Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<TruckOutlined />}
-                loading={shipMutation.isPending}
-              >
-                Create Shipment
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+        </div>
       </Modal>
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -13,13 +14,14 @@ import {
   Row,
   Col,
   Typography,
-  Divider,
+  App,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ArrowLeftOutlined,
   PrinterOutlined,
   FileTextOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { PageHeader } from '@/components/ui';
@@ -40,13 +42,37 @@ const statusLabels: Record<GRNStatus, string> = {
 export default function GRNDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { message } = App.useApp();
   const id = params.id as string;
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: grn, isLoading } = useQuery({
     queryKey: ['grn', id],
     queryFn: () => purchasesService.getGRN(id),
     enabled: !!id,
   });
+
+  const handleDownloadPdf = async () => {
+    if (!grn) return;
+
+    setIsDownloading(true);
+    try {
+      const blob = await purchasesService.downloadGRNPdf(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `GRN-${grn.grnNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success('PDF downloaded successfully');
+    } catch (error: any) {
+      message.error(error.response?.data?.error?.message || 'Failed to download PDF');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const columns: ColumnsType<GRNLine> = [
     {
@@ -127,6 +153,13 @@ export default function GRNDetailPage() {
         }
         extra={
           <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadPdf}
+              loading={isDownloading}
+            >
+              Download PDF
+            </Button>
             <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
               Print
             </Button>

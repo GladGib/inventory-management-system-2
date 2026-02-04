@@ -117,7 +117,9 @@ export interface PaymentReceived {
 export interface PaymentsReceivedListParams {
   page?: number;
   limit?: number;
+  search?: string;
   customerId?: string;
+  paymentMethod?: string;
   fromDate?: string;
   toDate?: string;
 }
@@ -164,6 +166,11 @@ export const invoicesService = {
 
   voidInvoice: async (id: string): Promise<Invoice> => {
     const response = await apiClient.post<ApiResponse<Invoice>>(`/invoices/${id}/void`);
+    return response.data.data;
+  },
+
+  sendEmail: async (id: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(`/invoices/${id}/send-email`);
     return response.data.data;
   },
 

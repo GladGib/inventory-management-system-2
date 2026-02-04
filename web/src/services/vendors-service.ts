@@ -59,4 +59,82 @@ export const vendorsService = {
   deleteVendor: async (id: string): Promise<void> => {
     await apiClient.delete(`/vendors/${id}`);
   },
+
+  getVendorItems: async (id: string): Promise<VendorItem[]> => {
+    const response = await apiClient.get<ApiResponse<VendorItem[]>>(`/vendors/${id}/items`);
+    return response.data.data;
+  },
+
+  addVendorItem: async (vendorId: string, data: CreateVendorItemRequest): Promise<VendorItem> => {
+    const response = await apiClient.post<ApiResponse<VendorItem>>(`/vendors/${vendorId}/items`, data);
+    return response.data.data;
+  },
+
+  updateVendorItem: async (vendorId: string, itemId: string, data: UpdateVendorItemRequest): Promise<VendorItem> => {
+    const response = await apiClient.put<ApiResponse<VendorItem>>(`/vendors/${vendorId}/items/${itemId}`, data);
+    return response.data.data;
+  },
+
+  removeVendorItem: async (vendorId: string, itemId: string): Promise<void> => {
+    await apiClient.delete(`/vendors/${vendorId}/items/${itemId}`);
+  },
+
+  getTransactionHistory: async (id: string, params?: VendorTransactionsParams): Promise<ApiListResponse<VendorTransaction>> => {
+    const response = await apiClient.get<ApiListResponse<VendorTransaction>>(`/vendors/${id}/transactions`, { params });
+    return response.data;
+  },
 };
+
+export interface VendorItem {
+  id: string;
+  vendorId: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  vendorSku?: string;
+  unitCost?: number;
+  leadTimeDays?: number;
+  minOrderQty?: number;
+  isPreferred: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateVendorItemRequest {
+  itemId: string;
+  vendorSku?: string;
+  unitCost?: number;
+  leadTimeDays?: number;
+  minOrderQty?: number;
+  isPreferred?: boolean;
+  notes?: string;
+}
+
+export interface UpdateVendorItemRequest {
+  vendorSku?: string;
+  unitCost?: number;
+  leadTimeDays?: number;
+  minOrderQty?: number;
+  isPreferred?: boolean;
+  notes?: string;
+}
+
+export interface VendorTransaction {
+  id: string;
+  type: 'PO' | 'GRN' | 'BILL' | 'PAYMENT';
+  documentNumber: string;
+  documentDate: string;
+  amount: number;
+  status: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface VendorTransactionsParams {
+  page?: number;
+  limit?: number;
+  type?: 'PO' | 'GRN' | 'BILL' | 'PAYMENT';
+  fromDate?: string;
+  toDate?: string;
+}

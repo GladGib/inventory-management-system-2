@@ -6,7 +6,16 @@ export interface BinLocation {
   name: string;
   description?: string;
   warehouseId: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  shelf?: string;
+  capacity?: number;
   isActive: boolean;
+  currentStock?: number;
+  _count?: {
+    stockLevels: number;
+  };
 }
 
 export interface Warehouse {
@@ -38,7 +47,23 @@ export interface CreateBinLocationRequest {
   code: string;
   name: string;
   description?: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  shelf?: string;
+  capacity?: number;
   isActive?: boolean;
+}
+
+export interface BinStockLevel {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  quantity: number;
+  binLocationId: string;
+  binLocationCode: string;
+  warehouseId: string;
+  warehouseName: string;
 }
 
 export interface WarehousesListParams {
@@ -138,5 +163,26 @@ export const warehousesService = {
 
   deleteBinLocation: async (warehouseId: string, binId: string): Promise<void> => {
     await apiClient.delete(`/warehouses/${warehouseId}/bins/${binId}`);
+  },
+
+  getBinLocation: async (warehouseId: string, binId: string): Promise<BinLocation> => {
+    const response = await apiClient.get<ApiResponse<BinLocation>>(`/warehouses/${warehouseId}/bins/${binId}`);
+    return response.data.data;
+  },
+
+  // Stock by Bin
+  getStockByBin: async (params?: { warehouseId?: string; search?: string; page?: number; limit?: number }): Promise<ApiListResponse<BinStockLevel>> => {
+    const response = await apiClient.get<ApiListResponse<BinStockLevel>>('/stock-by-bin', { params });
+    return response.data;
+  },
+
+  getBinStock: async (warehouseId: string, binId: string): Promise<BinStockLevel[]> => {
+    const response = await apiClient.get<ApiResponse<BinStockLevel[]>>(`/warehouses/${warehouseId}/bins/${binId}/stock`);
+    return response.data.data;
+  },
+
+  deactivateBinLocation: async (warehouseId: string, binId: string): Promise<BinLocation> => {
+    const response = await apiClient.put<ApiResponse<BinLocation>>(`/warehouses/${warehouseId}/bins/${binId}`, { isActive: false });
+    return response.data.data;
   },
 };

@@ -292,11 +292,14 @@ export class GRNResponseDto {
   @ApiProperty()
   grnNumber: string;
 
-  @ApiProperty()
-  purchaseOrderId: string;
+  @ApiPropertyOptional({ description: 'Purchase order ID (null for direct GRN)' })
+  purchaseOrderId?: string;
 
-  @ApiProperty()
-  poNumber: string;
+  @ApiPropertyOptional({ description: 'Purchase order number (null for direct GRN)' })
+  poNumber?: string;
+
+  @ApiPropertyOptional()
+  vendorId?: string;
 
   @ApiProperty()
   vendorName: string;

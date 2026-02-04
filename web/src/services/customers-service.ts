@@ -94,4 +94,114 @@ export const customersService = {
     const response = await apiClient.get(`/customers/${id}/credit`);
     return response.data.data;
   },
+
+  getAddresses: async (id: string): Promise<CustomerAddress[]> => {
+    const response = await apiClient.get<ApiResponse<CustomerAddress[]>>(`/customers/${id}/addresses`);
+    return response.data.data;
+  },
+
+  addAddress: async (customerId: string, data: CreateAddressRequest): Promise<CustomerAddress> => {
+    const response = await apiClient.post<ApiResponse<CustomerAddress>>(`/customers/${customerId}/addresses`, data);
+    return response.data.data;
+  },
+
+  updateAddress: async (customerId: string, addressId: string, data: UpdateAddressRequest): Promise<CustomerAddress> => {
+    const response = await apiClient.put<ApiResponse<CustomerAddress>>(`/customers/${customerId}/addresses/${addressId}`, data);
+    return response.data.data;
+  },
+
+  deleteAddress: async (customerId: string, addressId: string): Promise<void> => {
+    await apiClient.delete(`/customers/${customerId}/addresses/${addressId}`);
+  },
+
+  setDefaultAddress: async (customerId: string, addressId: string): Promise<CustomerAddress> => {
+    const response = await apiClient.post<ApiResponse<CustomerAddress>>(`/customers/${customerId}/addresses/${addressId}/set-default`);
+    return response.data.data;
+  },
+
+  getTransactionHistory: async (id: string, params?: CustomerTransactionsParams): Promise<ApiListResponse<CustomerTransaction>> => {
+    const response = await apiClient.get<ApiListResponse<CustomerTransaction>>(`/customers/${id}/transactions`, { params });
+    return response.data;
+  },
+
+  getStatement: async (id: string, params: StatementParams): Promise<CustomerStatement> => {
+    const response = await apiClient.get<ApiResponse<CustomerStatement>>(`/customers/${id}/statement`, { params });
+    return response.data.data;
+  },
+
+  getStatementPdfUrl: (id: string, fromDate: string, toDate: string): string => {
+    return `/customers/${id}/statement/pdf?fromDate=${fromDate}&toDate=${toDate}`;
+  },
 };
+
+export interface CreateAddressRequest {
+  label: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateAddressRequest {
+  label?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  isDefault?: boolean;
+}
+
+export interface CustomerTransaction {
+  id: string;
+  type: 'ORDER' | 'INVOICE' | 'PAYMENT' | 'RETURN';
+  documentNumber: string;
+  documentDate: string;
+  amount: number;
+  status: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CustomerTransactionsParams {
+  page?: number;
+  limit?: number;
+  type?: 'ORDER' | 'INVOICE' | 'PAYMENT' | 'RETURN';
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface StatementParams {
+  fromDate: string;
+  toDate: string;
+}
+
+export interface StatementLine {
+  date: string;
+  documentNumber: string;
+  documentType: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface CustomerStatement {
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  customerAddress?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  fromDate: string;
+  toDate: string;
+  openingBalance: number;
+  totalDebits: number;
+  totalCredits: number;
+  closingBalance: number;
+  lines: StatementLine[];
+}

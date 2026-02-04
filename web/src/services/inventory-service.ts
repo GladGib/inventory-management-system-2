@@ -163,6 +163,16 @@ export const inventoryService = {
     return response.data.data;
   },
 
+  approveStockAdjustment: async (id: string): Promise<StockAdjustment> => {
+    const response = await apiClient.post<ApiResponse<StockAdjustment>>(`/stock-adjustments/${id}/approve`);
+    return response.data.data;
+  },
+
+  rejectStockAdjustment: async (id: string, reason?: string): Promise<StockAdjustment> => {
+    const response = await apiClient.post<ApiResponse<StockAdjustment>>(`/stock-adjustments/${id}/reject`, { reason });
+    return response.data.data;
+  },
+
   // Stock Transfers
   getStockTransfers: async (params?: { page?: number; limit?: number; status?: TransferStatus }): Promise<ApiListResponse<StockTransfer>> => {
     const response = await apiClient.get<ApiListResponse<StockTransfer>>('/stock-transfers', { params });

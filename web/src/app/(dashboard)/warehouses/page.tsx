@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   Table,
@@ -28,6 +29,7 @@ import {
   EyeOutlined,
   StarOutlined,
   StarFilled,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -44,6 +46,7 @@ import type { MenuProps } from 'antd';
 const { Title, Text } = Typography;
 
 export default function WarehousesPage() {
+  const router = useRouter();
   const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
@@ -230,6 +233,12 @@ export default function WarehousesPage() {
       icon: <EyeOutlined />,
       label: 'View Details',
       onClick: () => setViewingWarehouse(record),
+    },
+    {
+      key: 'bins',
+      icon: <AppstoreOutlined />,
+      label: 'Manage Bin Locations',
+      onClick: () => router.push(`/warehouses/${record.id}/bins`),
     },
     {
       key: 'edit',

@@ -42,6 +42,7 @@ const menuItems: MenuItem[] = [
       { key: '/purchases/orders', label: 'Purchase Orders' },
       { key: '/purchases/receiving', label: 'Goods Received' },
       { key: '/purchases/bills', label: 'Bills' },
+      { key: '/purchases/payments', label: 'Payments Made' },
     ],
   },
   {
@@ -53,6 +54,7 @@ const menuItems: MenuItem[] = [
       { key: '/categories', label: 'Categories' },
       { key: '/warehouses', label: 'Warehouses' },
       { key: '/inventory/stock', label: 'Stock Levels' },
+      { key: '/inventory/stock-by-bin', label: 'Stock by Bin' },
       { key: '/inventory/movements', label: 'Stock Movements' },
       { key: '/inventory/adjustments', label: 'Stock Adjustments' },
       { key: '/inventory/transfers', label: 'Stock Transfers' },

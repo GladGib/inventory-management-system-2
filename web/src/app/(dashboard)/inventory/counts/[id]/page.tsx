@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,6 +20,9 @@ import {
   Statistic,
   Progress,
   Divider,
+  Input,
+  Radio,
+  Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -28,6 +31,9 @@ import {
   SaveOutlined,
   ExclamationCircleOutlined,
   WarningOutlined,
+  SearchOutlined,
+  FileSearchOutlined,
+  FilterOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { PageHeader } from '@/components/ui';
@@ -50,6 +56,8 @@ const statusLabels: Record<string, string> = {
   COMPLETED: 'Completed',
 };
 
+type FilterType = 'all' | 'pending' | 'counted' | 'variance';
+
 export default function StockCountDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -59,6 +67,8 @@ export default function StockCountDetailPage() {
 
   const [countEntries, setCountEntries] = useState<Record<string, number | null>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
   const { data: stockCount, isLoading } = useQuery({
     queryKey: ['stock-count', countId],
@@ -179,6 +189,44 @@ export default function StockCountDetailPage() {
     (l) => l.variance !== null && l.variance !== 0
   ).length || 0;
 
+  // Calculate current variance items including unsaved entries
+  const currentVarianceItems = useMemo(() => {
+    return stockCount?.lines.filter((l) => {
+      const variance = stockCount.status === 'COMPLETED' ? l.variance : getVariance(l);
+      return variance !== null && variance !== 0;
+    }).length || 0;
+  }, [stockCount, countEntries]);
+
+  // Filter lines based on search and filter type
+  const filteredLines = useMemo(() => {
+    if (!stockCount?.lines) return [];
+
+    return stockCount.lines.filter((line) => {
+      // Search filter
+      const searchLower = searchText.toLowerCase();
+      const matchesSearch = !searchText ||
+        line.itemCode.toLowerCase().includes(searchLower) ||
+        line.itemName.toLowerCase().includes(searchLower);
+
+      if (!matchesSearch) return false;
+
+      // Type filter
+      const counted = getDisplayedValue(line);
+      const variance = stockCount.status === 'COMPLETED' ? line.variance : getVariance(line);
+
+      switch (filterType) {
+        case 'pending':
+          return counted === null || counted === undefined;
+        case 'counted':
+          return counted !== null && counted !== undefined;
+        case 'variance':
+          return variance !== null && variance !== 0;
+        default:
+          return true;
+      }
+    });
+  }, [stockCount, searchText, filterType, countEntries]);
+
   const columns: ColumnsType<StockCountLine> = [
     {
       title: 'Item Code',
@@ -284,26 +332,46 @@ export default function StockCountDetailPage() {
           </Space>
         }
         extra={
-          stockCount.status === 'IN_PROGRESS' && (
-            <Space>
+          <Space>
+            {stockCount.status === 'IN_PROGRESS' && (
+              <>
+                <Button
+                  icon={<SaveOutlined />}
+                  onClick={handleSave}
+                  loading={saveMutation.isPending}
+                  disabled={!hasChanges}
+                >
+                  Save Entries
+                </Button>
+                {currentVarianceItems > 0 && (
+                  <Tooltip title="Review items with variances">
+                    <Button
+                      icon={<FileSearchOutlined />}
+                      onClick={() => router.push(`/inventory/counts/${countId}/review`)}
+                    >
+                      Review Variances ({currentVarianceItems})
+                    </Button>
+                  </Tooltip>
+                )}
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  onClick={handleComplete}
+                  loading={completeMutation.isPending}
+                >
+                  Complete Count
+                </Button>
+              </>
+            )}
+            {stockCount.status === 'COMPLETED' && varianceItems > 0 && (
               <Button
-                icon={<SaveOutlined />}
-                onClick={handleSave}
-                loading={saveMutation.isPending}
-                disabled={!hasChanges}
+                icon={<FileSearchOutlined />}
+                onClick={() => router.push(`/inventory/counts/${countId}/review`)}
               >
-                Save Entries
+                View Variance Report
               </Button>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={handleComplete}
-                loading={completeMutation.isPending}
-              >
-                Complete Count
-              </Button>
-            </Space>
-          )
+            )}
+          </Space>
         }
       />
 
@@ -319,11 +387,47 @@ export default function StockCountDetailPage() {
                 showIcon
               />
             )}
+
+            {/* Search and Filter Controls */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <Input
+                placeholder="Search by item code or name..."
+                prefix={<SearchOutlined />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: 280 }}
+                allowClear
+              />
+              <Radio.Group
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+              >
+                <Radio.Button value="all">
+                  All ({totalItems})
+                </Radio.Button>
+                <Radio.Button value="pending">
+                  Pending ({totalItems - countedItems})
+                </Radio.Button>
+                <Radio.Button value="counted">
+                  Counted ({countedItems})
+                </Radio.Button>
+                <Radio.Button value="variance">
+                  <WarningOutlined /> Variance ({currentVarianceItems})
+                </Radio.Button>
+              </Radio.Group>
+            </div>
+
             <Table
-              dataSource={stockCount.lines}
+              dataSource={filteredLines}
               columns={columns}
               rowKey="id"
-              pagination={false}
+              pagination={{
+                pageSize: 20,
+                showSizeChanger: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+              }}
               size="middle"
               scroll={{ x: 700 }}
               rowClassName={(record) => {
@@ -332,6 +436,11 @@ export default function StockCountDetailPage() {
                   return 'bg-yellow-50';
                 }
                 return '';
+              }}
+              locale={{
+                emptyText: filterType !== 'all'
+                  ? `No items match the "${filterType}" filter`
+                  : 'No items to count',
               }}
             />
           </Card>

@@ -2,13 +2,12 @@ import {
   Injectable,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import * as nodemailer from 'nodemailer';
 import * as Handlebars from 'handlebars';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface EmailOptions {
   to: string;
@@ -33,8 +32,10 @@ export interface EmailLogEntry {
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
   private templates: Map<string, Handlebars.TemplateDelegate> = new Map();
+  private isConfigured = false;
 
   constructor(
     private readonly configService: ConfigService,
@@ -50,14 +51,34 @@ export class EmailService {
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
 
-    if (host && port) {
+    if (!host || !port) {
+      this.logger.warn(
+        'SMTP not configured. Email sending will be skipped. Set SMTP_HOST and SMTP_PORT environment variables to enable email functionality.',
+      );
+      this.isConfigured = false;
+      return;
+    }
+
+    try {
       this.transporter = nodemailer.createTransport({
         host,
         port,
         secure: port === 465,
         auth: user && pass ? { user, pass } : undefined,
       });
+      this.isConfigured = true;
+      this.logger.log(`Email service initialized with SMTP host: ${host}:${port}`);
+    } catch (error: any) {
+      this.logger.error(`Failed to initialize email transporter: ${error.message}`);
+      this.isConfigured = false;
     }
+  }
+
+  /**
+   * Check if the email service is properly configured
+   */
+  isEmailConfigured(): boolean {
+    return this.isConfigured && this.transporter !== null;
   }
 
   private loadTemplates(): void {
@@ -233,8 +254,8 @@ export class EmailService {
   }
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
-    if (!this.transporter) {
-      return { success: false, message: 'Email not configured. Set SMTP_HOST and SMTP_PORT.' };
+    if (!this.isConfigured || !this.transporter) {
+      return { success: false, message: 'Email not configured. Set SMTP_HOST and SMTP_PORT environment variables.' };
     }
 
     try {
@@ -245,9 +266,13 @@ export class EmailService {
     }
   }
 
-  async sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string }> {
-    if (!this.transporter) {
-      throw new BadRequestException('Email not configured. Contact administrator.');
+  async sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; skipped?: boolean }> {
+    // Handle missing SMTP config gracefully - log warning and skip sending
+    if (!this.isConfigured || !this.transporter) {
+      this.logger.warn(
+        `Skipping email to ${options.to} (subject: "${options.subject}") - SMTP not configured`,
+      );
+      return { success: false, skipped: true };
     }
 
     const template = this.templates.get(options.template);
@@ -270,8 +295,10 @@ export class EmailService {
         })),
       });
 
+      this.logger.log(`Email sent to ${options.to} (messageId: ${result.messageId})`);
       return { success: true, messageId: result.messageId };
     } catch (error: any) {
+      this.logger.error(`Failed to send email to ${options.to}: ${error.message}`);
       throw new InternalServerErrorException(`Failed to send email: ${error.message}`);
     }
   }
@@ -280,7 +307,15 @@ export class EmailService {
     organizationId: string,
     purchaseOrderId: string,
     pdfBuffer: Buffer,
-  ): Promise<{ success: boolean; sentAt: Date }> {
+  ): Promise<{ success: boolean; sentAt?: Date; skipped?: boolean; message?: string }> {
+    // Handle missing SMTP config gracefully
+    if (!this.isConfigured || !this.transporter) {
+      this.logger.warn(
+        `Skipping purchase order email for PO ${purchaseOrderId} - SMTP not configured`,
+      );
+      return { success: false, skipped: true, message: 'SMTP not configured' };
+    }
+
     const po = await this.prisma.purchaseOrder.findFirst({
       where: { id: purchaseOrderId, organizationId },
       include: {
@@ -317,7 +352,7 @@ export class EmailService {
       organizationPhone: po.organization.phone,
     };
 
-    await this.sendEmail({
+    const result = await this.sendEmail({
       to: po.vendor.email,
       subject: `Purchase Order ${po.orderNumber} from ${po.organization.name}`,
       template: 'purchase-order',
@@ -331,6 +366,10 @@ export class EmailService {
       ],
     });
 
+    if (result.skipped) {
+      return { success: false, skipped: true, message: 'SMTP not configured' };
+    }
+
     return { success: true, sentAt: new Date() };
   }
 
@@ -338,7 +377,15 @@ export class EmailService {
     organizationId: string,
     invoiceId: string,
     pdfBuffer: Buffer,
-  ): Promise<{ success: boolean; sentAt: Date }> {
+  ): Promise<{ success: boolean; sentAt?: Date; skipped?: boolean; message?: string }> {
+    // Handle missing SMTP config gracefully
+    if (!this.isConfigured || !this.transporter) {
+      this.logger.warn(
+        `Skipping invoice email for Invoice ${invoiceId} - SMTP not configured`,
+      );
+      return { success: false, skipped: true, message: 'SMTP not configured' };
+    }
+
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, organizationId },
       include: {
@@ -379,7 +426,7 @@ export class EmailService {
       organizationPhone: invoice.organization.phone,
     };
 
-    await this.sendEmail({
+    const result = await this.sendEmail({
       to: invoice.customer.email,
       subject: `Invoice ${invoice.invoiceNumber} from ${invoice.organization.name} - MYR ${context.total}`,
       template: 'invoice',
@@ -392,6 +439,10 @@ export class EmailService {
         },
       ],
     });
+
+    if (result.skipped) {
+      return { success: false, skipped: true, message: 'SMTP not configured' };
+    }
 
     return { success: true, sentAt: new Date() };
   }

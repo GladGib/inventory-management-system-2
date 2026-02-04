@@ -55,6 +55,24 @@ export interface CreateGRNRequest {
   lines: CreateGRNLineRequest[];
 }
 
+// Direct GRN (without PO) types
+export interface CreateDirectGRNLineRequest {
+  itemId: string;
+  quantityReceived: number;
+  unitCost: number;
+  binLocationId?: string;
+  notes?: string;
+}
+
+export interface CreateDirectGRNRequest {
+  vendorId: string;
+  warehouseId: string;
+  receiveDate?: string;
+  vendorInvoiceNo?: string;
+  notes?: string;
+  lines: CreateDirectGRNLineRequest[];
+}
+
 export type GRNStatus = 'DRAFT' | 'CONFIRMED';
 
 export interface GRNLine {
@@ -210,6 +228,37 @@ export const purchasesService = {
 
   getGRN: async (id: string): Promise<GoodsReceivedNote> => {
     const response = await apiClient.get<ApiResponse<GoodsReceivedNote>>(`/purchase-orders/grn/${id}`);
+    return response.data.data;
+  },
+
+  // Direct GRN creation (without PO)
+  createDirectGRN: async (data: CreateDirectGRNRequest): Promise<GoodsReceivedNote> => {
+    const response = await apiClient.post<ApiResponse<GoodsReceivedNote>>('/grns', data);
+    return response.data.data;
+  },
+
+  // Download GRN PDF
+  downloadGRNPdf: async (id: string): Promise<Blob> => {
+    const response = await apiClient.get(`/grns/${id}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Get open (receivable) purchase orders for GRN creation
+  getOpenPurchaseOrders: async (vendorId?: string): Promise<ApiListResponse<PurchaseOrder>> => {
+    const response = await apiClient.get<ApiListResponse<PurchaseOrder>>('/purchase-orders', {
+      params: {
+        status: 'ISSUED,PARTIALLY_RECEIVED',
+        vendorId,
+        limit: 100,
+      },
+    });
+    return response.data;
+  },
+
+  sendEmail: async (id: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(`/purchase-orders/${id}/send-email`);
     return response.data.data;
   },
 };

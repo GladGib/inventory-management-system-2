@@ -508,6 +508,7 @@ export class PurchasesService {
       },
       include: {
         purchaseOrder: { include: { vendor: true } },
+        vendor: true,
         warehouse: true,
         lines: {
           include: {
@@ -1017,9 +1018,10 @@ export class PurchasesService {
     return {
       id: grn.id,
       grnNumber: grn.grnNumber,
-      purchaseOrderId: grn.purchaseOrderId,
-      poNumber: grn.purchaseOrder.orderNumber,
-      vendorName: grn.purchaseOrder.vendor.companyName,
+      purchaseOrderId: grn.purchaseOrderId || undefined,
+      poNumber: grn.purchaseOrder?.orderNumber || undefined,
+      vendorId: grn.vendorId,
+      vendorName: grn.purchaseOrder?.vendor?.companyName || grn.vendor?.companyName,
       receiveDate: grn.receiveDate,
       warehouseId: grn.warehouseId,
       warehouseName: grn.warehouse?.name,
@@ -1033,7 +1035,7 @@ export class PurchasesService {
         itemName: l.item.name,
         quantityReceived: l.receivedQty,
         binLocationId: l.binLocationId,
-        binLocationCode: undefined,
+        binLocationCode: undefined, // binLocation relation not defined in schema
       })),
     };
   }

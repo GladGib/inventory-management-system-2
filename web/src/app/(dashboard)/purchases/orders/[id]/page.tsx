@@ -30,6 +30,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   InboxOutlined,
+  MailOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -138,6 +139,16 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
     },
     onError: (error: any) => {
       message.error(error.response?.data?.error?.message || 'Failed to receive goods');
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: () => purchasesService.sendEmail(id),
+    onSuccess: () => {
+      message.success('Purchase order email sent to vendor successfully');
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to send email');
     },
   });
 
@@ -392,6 +403,15 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
               loading={cancelMutation.isPending}
             >
               Cancel
+            </Button>
+          )}
+          {['ISSUED', 'CONFIRMED', 'PARTIALLY_RECEIVED'].includes(order.status) && (
+            <Button
+              icon={<MailOutlined />}
+              onClick={() => sendEmailMutation.mutate()}
+              loading={sendEmailMutation.isPending}
+            >
+              Send Email
             </Button>
           )}
           <Button icon={<PrinterOutlined />}>Print</Button>

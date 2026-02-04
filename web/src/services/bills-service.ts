@@ -106,6 +106,55 @@ export interface PaymentSummary {
   pendingAmount: number;
 }
 
+export interface UnbilledGRN {
+  id: string;
+  grnNumber: string;
+  vendorId: string;
+  vendorCode: string;
+  vendorName: string;
+  receiveDate: string;
+  poNumber?: string;
+  lineCount: number;
+  estimatedTotal: number;
+}
+
+export interface UnbilledGRNsParams {
+  vendorId?: string;
+  limit?: number;
+}
+
+export interface CreateConsolidatedBillRequest {
+  vendorId: string;
+  grnIds: string[];
+  vendorInvoiceNumber?: string;
+  billDate?: string;
+  dueDate?: string;
+  notes?: string;
+}
+
+export interface VendorPayment {
+  id: string;
+  billId: string;
+  billNumber: string;
+  vendorId: string;
+  vendorCode: string;
+  vendorName: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: string;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface VendorPaymentsListParams {
+  page?: number;
+  limit?: number;
+  vendorId?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
 export const billsService = {
   getBills: async (params?: BillListParams): Promise<ApiListResponse<BillSummary>> => {
     const response = await apiClient.get<ApiListResponse<BillSummary>>('/bills', { params });
@@ -150,5 +199,22 @@ export const billsService = {
     const params = vendorId ? { vendorId } : {};
     const response = await apiClient.get<ApiResponse<PaymentSummary>>('/bills/payment-summary', { params });
     return response.data.data;
+  },
+
+  getUnbilledGRNs: async (params?: UnbilledGRNsParams): Promise<UnbilledGRN[]> => {
+    const response = await apiClient.get<ApiResponse<UnbilledGRN[]>>('/bills/unbilled-grns', { params });
+    return response.data.data;
+  },
+
+  createConsolidatedBill: async (data: CreateConsolidatedBillRequest): Promise<Bill> => {
+    const response = await apiClient.post<ApiResponse<Bill>>('/bills/consolidated', data);
+    return response.data.data;
+  },
+};
+
+export const vendorPaymentsService = {
+  getVendorPayments: async (params?: VendorPaymentsListParams): Promise<ApiListResponse<VendorPayment>> => {
+    const response = await apiClient.get<ApiListResponse<VendorPayment>>('/vendor-payments', { params });
+    return response.data;
   },
 };

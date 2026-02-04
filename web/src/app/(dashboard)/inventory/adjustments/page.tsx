@@ -16,8 +16,21 @@ import {
   Input,
   InputNumber,
   Space,
+  Tabs,
+  Statistic,
+  Alert,
+  Divider,
+  Popconfirm,
 } from 'antd';
-import { PlusOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   inventoryService,
@@ -50,6 +63,22 @@ const adjustmentTypeLabels: Record<AdjustmentType, string> = {
   OTHER: 'Other',
 };
 
+const statusColors: Record<string, string> = {
+  DRAFT: 'default',
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'error',
+  CONFIRMED: 'success',
+};
+
+const statusLabels: Record<string, string> = {
+  DRAFT: 'Draft',
+  PENDING: 'Pending Approval',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  CONFIRMED: 'Confirmed',
+};
+
 interface AdjustmentItem {
   key: string;
   itemId: string;
@@ -59,16 +88,26 @@ interface AdjustmentItem {
 }
 
 export default function StockAdjustmentsPage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
+  const [rejectForm] = Form.useForm();
 
-  const [params, setParams] = useState<{ page: number; limit: number; warehouseId?: string; type?: AdjustmentType }>({
+  const [params, setParams] = useState<{
+    page: number;
+    limit: number;
+    warehouseId?: string;
+    type?: AdjustmentType;
+    status?: string;
+  }>({
     page: 1,
     limit: 20,
   });
+  const [activeTab, setActiveTab] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingAdjustment, setViewingAdjustment] = useState<StockAdjustment | null>(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [adjustmentItems, setAdjustmentItems] = useState<AdjustmentItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
@@ -96,6 +135,46 @@ export default function StockAdjustmentsPage() {
     },
     onError: (error: any) => {
       message.error(error.response?.data?.error?.message || 'Failed to create adjustment');
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => inventoryService.approveStockAdjustment(id),
+    onSuccess: () => {
+      message.success('Adjustment approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['stock-adjustments'] });
+      setViewingAdjustment(null);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to approve adjustment');
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      inventoryService.rejectStockAdjustment(id, reason),
+    onSuccess: () => {
+      message.success('Adjustment rejected');
+      queryClient.invalidateQueries({ queryKey: ['stock-adjustments'] });
+      setRejectModalOpen(false);
+      setRejectingId(null);
+      setViewingAdjustment(null);
+      rejectForm.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to reject adjustment');
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: (id: string) => inventoryService.confirmStockAdjustment(id),
+    onSuccess: () => {
+      message.success('Adjustment confirmed and applied to inventory');
+      queryClient.invalidateQueries({ queryKey: ['stock-adjustments'] });
+      setViewingAdjustment(null);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to confirm adjustment');
     },
   });
 
@@ -165,6 +244,64 @@ export default function StockAdjustmentsPage() {
     createMutation.mutate(adjustmentData);
   };
 
+  const handleApprove = (id: string) => {
+    modal.confirm({
+      title: 'Approve Adjustment',
+      icon: <CheckCircleOutlined className="text-green-500" />,
+      content: 'Are you sure you want to approve this stock adjustment?',
+      okText: 'Approve',
+      okType: 'primary',
+      onOk: () => approveMutation.mutate(id),
+    });
+  };
+
+  const handleOpenRejectModal = (id: string) => {
+    setRejectingId(id);
+    setRejectModalOpen(true);
+  };
+
+  const handleReject = (values: { reason?: string }) => {
+    if (rejectingId) {
+      rejectMutation.mutate({ id: rejectingId, reason: values.reason });
+    }
+  };
+
+  const handleConfirm = (id: string) => {
+    modal.confirm({
+      title: 'Confirm Adjustment',
+      icon: <ExclamationCircleOutlined className="text-blue-500" />,
+      content: (
+        <div>
+          <p>Are you sure you want to confirm this stock adjustment?</p>
+          <Alert
+            type="warning"
+            message="This action will update inventory levels"
+            className="mt-2"
+            showIcon
+          />
+        </div>
+      ),
+      okText: 'Confirm & Apply',
+      okType: 'primary',
+      onOk: () => confirmMutation.mutate(id),
+    });
+  };
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    if (key === 'all') {
+      setParams((prev) => ({ ...prev, status: undefined, page: 1 }));
+    } else if (key === 'pending') {
+      setParams((prev) => ({ ...prev, status: 'PENDING', page: 1 }));
+    } else if (key === 'approved') {
+      setParams((prev) => ({ ...prev, status: 'APPROVED', page: 1 }));
+    }
+  };
+
+  // Calculate statistics
+  const pendingCount = data?.data?.filter((a) => a.status === 'PENDING').length || 0;
+  const approvedCount = data?.data?.filter((a) => a.status === 'APPROVED').length || 0;
+
   const columns: ColumnsType<StockAdjustment> = [
     {
       title: 'Adjustment #',
@@ -196,6 +333,17 @@ export default function StockAdjustmentsPage() {
       ),
     },
     {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 140,
+      render: (status: string) => (
+        <Tag color={statusColors[status] || 'default'}>
+          {statusLabels[status] || status}
+        </Tag>
+      ),
+    },
+    {
       title: 'Reason',
       dataIndex: 'reason',
       key: 'reason',
@@ -212,13 +360,42 @@ export default function StockAdjustmentsPage() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 80,
+      width: 180,
       render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          onClick={() => setViewingAdjustment(record)}
-        />
+        <Space size="small">
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => setViewingAdjustment(record)}
+          />
+          {(record.status === 'PENDING' || record.status === 'DRAFT') && (
+            <>
+              <Button
+                type="text"
+                icon={<CheckCircleOutlined />}
+                className="text-green-500"
+                onClick={() => handleApprove(record.id)}
+                loading={approveMutation.isPending}
+              />
+              <Button
+                type="text"
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => handleOpenRejectModal(record.id)}
+              />
+            </>
+          )}
+          {record.status === 'APPROVED' && (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => handleConfirm(record.id)}
+              loading={confirmMutation.isPending}
+            >
+              Confirm
+            </Button>
+          )}
+        </Space>
       ),
     },
   ];
@@ -263,6 +440,10 @@ export default function StockAdjustmentsPage() {
     },
   ];
 
+  const isPendingApproval = (adjustment: StockAdjustment) =>
+    adjustment.status === 'PENDING' || adjustment.status === 'DRAFT';
+  const isApproved = (adjustment: StockAdjustment) => adjustment.status === 'APPROVED';
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -272,8 +453,68 @@ export default function StockAdjustmentsPage() {
         </Button>
       </div>
 
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={8}>
+          <Card>
+            <Statistic
+              title="Pending Approval"
+              value={pendingCount}
+              prefix={<ClockCircleOutlined className="text-yellow-500" />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card>
+            <Statistic
+              title="Approved (Ready to Confirm)"
+              value={approvedCount}
+              prefix={<CheckCircleOutlined className="text-green-500" />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card>
+            <Statistic
+              title="Total Adjustments"
+              value={data?.meta?.total || 0}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       <Card>
-        <Row gutter={[16, 16]} className="mb-4">
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          items={[
+            { key: 'all', label: 'All Adjustments' },
+            {
+              key: 'pending',
+              label: (
+                <Space>
+                  Pending Approval
+                  {pendingCount > 0 && (
+                    <Tag color="warning">{pendingCount}</Tag>
+                  )}
+                </Space>
+              ),
+            },
+            {
+              key: 'approved',
+              label: (
+                <Space>
+                  Approved
+                  {approvedCount > 0 && (
+                    <Tag color="success">{approvedCount}</Tag>
+                  )}
+                </Space>
+              ),
+            },
+          ]}
+        />
+
+        <Row gutter={[16, 16]} className="mb-4 mt-4">
           <Col xs={24} sm={12} md={8}>
             <Select
               placeholder="Filter by Warehouse"
@@ -315,7 +556,7 @@ export default function StockAdjustmentsPage() {
               setParams((prev) => ({ ...prev, page, limit: pageSize }));
             },
           }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 1000 }}
           size="middle"
         />
       </Card>
@@ -427,12 +668,48 @@ export default function StockAdjustmentsPage() {
         title={`Adjustment ${viewingAdjustment?.adjustmentNumber}`}
         open={!!viewingAdjustment}
         onCancel={() => setViewingAdjustment(null)}
-        footer={null}
-        width={600}
+        footer={
+          viewingAdjustment && (
+            <div className="flex justify-between">
+              <div>
+                {isPendingApproval(viewingAdjustment) && (
+                  <Space>
+                    <Button
+                      type="primary"
+                      icon={<CheckCircleOutlined />}
+                      onClick={() => handleApprove(viewingAdjustment.id)}
+                      loading={approveMutation.isPending}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      onClick={() => handleOpenRejectModal(viewingAdjustment.id)}
+                    >
+                      Reject
+                    </Button>
+                  </Space>
+                )}
+                {isApproved(viewingAdjustment) && (
+                  <Button
+                    type="primary"
+                    onClick={() => handleConfirm(viewingAdjustment.id)}
+                    loading={confirmMutation.isPending}
+                  >
+                    Confirm & Apply to Inventory
+                  </Button>
+                )}
+              </div>
+              <Button onClick={() => setViewingAdjustment(null)}>Close</Button>
+            </div>
+          )
+        }
+        width={700}
       >
         {viewingAdjustment && (
           <div>
-            <Row gutter={[16, 8]} className="mb-4">
+            <Row gutter={[16, 16]} className="mb-4">
               <Col span={12}>
                 <Text type="secondary">Date:</Text>
                 <div>{dayjs(viewingAdjustment.createdAt).format('DD/MM/YYYY HH:mm')}</div>
@@ -450,6 +727,14 @@ export default function StockAdjustmentsPage() {
                 </div>
               </Col>
               <Col span={12}>
+                <Text type="secondary">Status:</Text>
+                <div>
+                  <Tag color={statusColors[viewingAdjustment.status] || 'default'}>
+                    {statusLabels[viewingAdjustment.status] || viewingAdjustment.status}
+                  </Tag>
+                </div>
+              </Col>
+              <Col span={24}>
                 <Text type="secondary">Reason:</Text>
                 <div>{viewingAdjustment.reason}</div>
               </Col>
@@ -461,6 +746,9 @@ export default function StockAdjustmentsPage() {
               )}
             </Row>
 
+            <Divider />
+
+            <Text strong className="block mb-2">Adjustment Items</Text>
             <Table
               dataSource={viewingAdjustment.lines}
               columns={[
@@ -480,6 +768,18 @@ export default function StockAdjustmentsPage() {
                   key: 'quantity',
                   width: 100,
                   align: 'center',
+                  render: (qty: number) => (
+                    <Tag color={viewingAdjustment.adjustmentType === 'ADD' ? 'green' : 'red'}>
+                      {viewingAdjustment.adjustmentType === 'ADD' ? '+' : '-'}{qty}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: 'Bin Location',
+                  dataIndex: 'binLocationCode',
+                  key: 'binLocationCode',
+                  width: 120,
+                  render: (code: string) => code || '-',
                 },
               ]}
               rowKey="id"
@@ -488,6 +788,62 @@ export default function StockAdjustmentsPage() {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        title="Reject Adjustment"
+        open={rejectModalOpen}
+        onCancel={() => {
+          setRejectModalOpen(false);
+          setRejectingId(null);
+          rejectForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+      >
+        <Form form={rejectForm} layout="vertical" onFinish={handleReject}>
+          <Alert
+            type="warning"
+            message="This adjustment will be rejected and marked as invalid."
+            className="mb-4"
+            showIcon
+          />
+
+          <Form.Item
+            name="reason"
+            label="Rejection Reason"
+            rules={[{ required: true, message: 'Please provide a reason for rejection' }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Enter reason for rejecting this adjustment..."
+            />
+          </Form.Item>
+
+          <Form.Item className="mb-0">
+            <Space className="w-full justify-end">
+              <Button
+                onClick={() => {
+                  setRejectModalOpen(false);
+                  setRejectingId(null);
+                  rejectForm.resetFields();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="primary"
+                danger
+                htmlType="submit"
+                loading={rejectMutation.isPending}
+                icon={<CloseCircleOutlined />}
+              >
+                Reject Adjustment
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

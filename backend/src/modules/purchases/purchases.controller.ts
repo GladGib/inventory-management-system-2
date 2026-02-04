@@ -31,6 +31,7 @@ import {
 } from './dto';
 import { CurrentUser } from '@/common/decorators';
 import { PdfService } from '@/common/pdf';
+import { EmailService } from '@/common/email';
 
 @ApiTags('Purchase Orders')
 @ApiBearerAuth()
@@ -39,6 +40,7 @@ export class PurchasesController {
   constructor(
     private purchasesService: PurchasesService,
     private pdfService: PdfService,
+    private emailService: EmailService,
   ) {}
 
   @Post()
@@ -259,6 +261,41 @@ export class PurchasesController {
   ) {
     const grn = await this.purchasesService.createGRN(orgId, poId, dto);
     return { data: grn };
+  }
+
+  @Post(':id/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send purchase order via email to vendor' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email sent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            sentAt: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Vendor has no email or email not configured' })
+  @ApiResponse({ status: 404, description: 'Purchase order not found' })
+  async sendEmail(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    // Generate PDF first
+    const orderData = await this.purchasesService.getOrderForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generatePurchaseOrderPdf(orderData);
+
+    // Send email with PDF attachment
+    const result = await this.emailService.sendPurchaseOrderEmail(orgId, id, pdfBuffer);
+
+    return { data: result };
   }
 }
 

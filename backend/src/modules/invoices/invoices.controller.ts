@@ -29,6 +29,7 @@ import {
 } from './dto';
 import { CurrentUser } from '@/common/decorators';
 import { PdfService } from '@/common/pdf';
+import { EmailService } from '@/common/email';
 
 @ApiTags('Invoices')
 @ApiBearerAuth()
@@ -37,6 +38,7 @@ export class InvoicesController {
   constructor(
     private invoicesService: InvoicesService,
     private pdfService: PdfService,
+    private emailService: EmailService,
   ) {}
 
   @Post('from-order')
@@ -172,6 +174,41 @@ export class InvoicesController {
   ) {
     const payment = await this.invoicesService.recordPayment(orgId, invoiceId, dto);
     return { data: payment };
+  }
+
+  @Post(':id/send-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send invoice via email to customer' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email sent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            sentAt: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Customer has no email or email not configured' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async sendEmail(
+    @CurrentUser('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    // Generate PDF first
+    const invoiceData = await this.invoicesService.getInvoiceForPdf(orgId, id);
+    const pdfBuffer = await this.pdfService.generateInvoicePdf(invoiceData);
+
+    // Send email with PDF attachment
+    const result = await this.emailService.sendInvoiceEmail(orgId, id, pdfBuffer);
+
+    return { data: result };
   }
 }
 

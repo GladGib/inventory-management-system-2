@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Manage customer records including contact details, credit limits, payment terms, addresses, and transaction history for sales operations.
+
+## Requirements
 
 ### Requirement: Customer CRUD operations
 The system SHALL allow users to create, read, update, and soft delete customers.

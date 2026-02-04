@@ -198,6 +198,39 @@ interface CreditNoteData {
   notes?: string;
 }
 
+interface PaymentReceiptData {
+  receiptNumber: string;
+  paymentDate: Date;
+  organization: {
+    name: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
+  customer: {
+    companyName: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
+  invoiceReference: {
+    invoiceNumber: string;
+    invoiceDate: Date;
+    invoiceTotal: number;
+  };
+  paymentDetails: {
+    amount: number;
+    method: string;
+    referenceNumber?: string;
+    bankName?: string;
+    chequeNumber?: string;
+  };
+  previousBalance: number;
+  amountPaid: number;
+  remainingBalance: number;
+  notes?: string;
+}
+
 @Injectable()
 export class PdfService {
   async generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
@@ -942,6 +975,159 @@ export class PdfService {
     return amount.toLocaleString('en-MY', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
+    });
+  }
+
+  async generatePaymentReceiptPdf(data: PaymentReceiptData): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        // Header - Organization Info
+        doc.fontSize(20).font('Helvetica-Bold').text(data.organization.name, 50, 50);
+        doc.fontSize(10).font('Helvetica');
+        let y = 75;
+        if (data.organization.address) {
+          doc.text(data.organization.address, 50, y);
+          y += 15;
+        }
+        if (data.organization.phone) {
+          doc.text(`Tel: ${data.organization.phone}`, 50, y);
+          y += 15;
+        }
+        if (data.organization.email) {
+          doc.text(`Email: ${data.organization.email}`, 50, y);
+        }
+
+        // Receipt Title
+        doc
+          .fontSize(24)
+          .font('Helvetica-Bold')
+          .fillColor('#059669')
+          .text('PAYMENT RECEIPT', 350, 50, { align: 'right' });
+        doc.fillColor('#000');
+
+        // Receipt Info
+        const startY = 160;
+        doc.fontSize(12).font('Helvetica-Bold').text('Received From:', 50, startY);
+        doc.fontSize(10).font('Helvetica');
+        doc.text(data.customer.companyName, 50, startY + 18);
+        y = startY + 33;
+        if (data.customer.address) {
+          doc.text(data.customer.address, 50, y);
+          y += 15;
+        }
+        if (data.customer.phone) {
+          doc.text(`Tel: ${data.customer.phone}`, 50, y);
+          y += 15;
+        }
+        if (data.customer.email) {
+          doc.text(`Email: ${data.customer.email}`, 50, y);
+        }
+
+        // Receipt details on the right
+        doc.fontSize(10).font('Helvetica');
+        doc.text('Receipt No:', 380, startY, { width: 80, align: 'right' });
+        doc.text(data.receiptNumber, 465, startY, { width: 100, align: 'left' });
+
+        doc.text('Date:', 380, startY + 18, { width: 80, align: 'right' });
+        doc.text(this.formatDate(data.paymentDate), 465, startY + 18, { width: 100, align: 'left' });
+
+        // Invoice Reference Section
+        const invoiceY = 280;
+        doc.fontSize(12).font('Helvetica-Bold').text('Invoice Reference:', 50, invoiceY);
+        doc.fontSize(10).font('Helvetica');
+
+        // Invoice reference table
+        doc.rect(50, invoiceY + 20, 515, 25).fill('#f0f0f0');
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
+        const invHeaders = ['Invoice No', 'Invoice Date', 'Invoice Amount'];
+        const invColX = [55, 200, 400];
+        invHeaders.forEach((h, i) => {
+          doc.text(h, invColX[i], invoiceY + 28, { width: 150, align: i === 2 ? 'right' : 'left' });
+        });
+
+        doc.font('Helvetica').fontSize(10);
+        doc.text(data.invoiceReference.invoiceNumber, invColX[0], invoiceY + 50);
+        doc.text(this.formatDate(data.invoiceReference.invoiceDate), invColX[1], invoiceY + 50);
+        doc.text(`MYR ${this.formatMoney(data.invoiceReference.invoiceTotal)}`, invColX[2], invoiceY + 50, { width: 150, align: 'right' });
+
+        // Payment Details Section
+        const paymentY = invoiceY + 90;
+        doc.fontSize(12).font('Helvetica-Bold').text('Payment Details:', 50, paymentY);
+
+        doc.fontSize(10).font('Helvetica');
+        let detailY = paymentY + 25;
+
+        doc.text(`Payment Method: ${data.paymentDetails.method}`, 50, detailY);
+        detailY += 18;
+
+        if (data.paymentDetails.referenceNumber) {
+          doc.text(`Reference No: ${data.paymentDetails.referenceNumber}`, 50, detailY);
+          detailY += 18;
+        }
+
+        if (data.paymentDetails.bankName) {
+          doc.text(`Bank: ${data.paymentDetails.bankName}`, 50, detailY);
+          detailY += 18;
+        }
+
+        if (data.paymentDetails.chequeNumber) {
+          doc.text(`Cheque No: ${data.paymentDetails.chequeNumber}`, 50, detailY);
+          detailY += 18;
+        }
+
+        // Amount Summary
+        const summaryY = detailY + 30;
+        doc.moveTo(350, summaryY).lineTo(565, summaryY).stroke();
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text('Previous Balance:', 350, summaryY + 10, { width: 115, align: 'right' });
+        doc.text(`MYR ${this.formatMoney(data.previousBalance)}`, 470, summaryY + 10, { width: 75, align: 'right' });
+
+        doc.text('Amount Paid:', 350, summaryY + 28, { width: 115, align: 'right' });
+        doc.text(`MYR ${this.formatMoney(data.amountPaid)}`, 470, summaryY + 28, { width: 75, align: 'right' });
+
+        // Remaining Balance - highlighted
+        doc.rect(350, summaryY + 45, 215, 25).fill('#059669');
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#fff');
+        doc.text('Remaining Balance:', 355, summaryY + 52, { width: 110, align: 'right' });
+        doc.text(`MYR ${this.formatMoney(data.remainingBalance)}`, 470, summaryY + 52, { width: 75, align: 'right' });
+
+        // Notes
+        if (data.notes) {
+          doc.fillColor('#000').fontSize(9).font('Helvetica');
+          doc.text(`Notes: ${data.notes}`, 50, summaryY + 100);
+        }
+
+        // Footer
+        const footerY = doc.page.height - 120;
+        doc.fillColor('#666').fontSize(9);
+        doc.text('This is an official payment receipt.', 50, footerY, {
+          align: 'center',
+          width: 515,
+        });
+        doc.text('Thank you for your payment!', 50, footerY + 20, {
+          align: 'center',
+          width: 515,
+        });
+
+        // Signature lines
+        doc.fillColor('#000').fontSize(10);
+        doc.text('_____________________', 50, footerY + 50);
+        doc.text('Authorized Signature', 50, footerY + 65);
+        doc.text('_____________________', 400, footerY + 50);
+        doc.text('Date', 400, footerY + 65);
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }
