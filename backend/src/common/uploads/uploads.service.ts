@@ -279,6 +279,54 @@ export class UploadsService {
     return this.getItemImages(itemId, organizationId);
   }
 
+  async setPrimaryImage(
+    itemId: string,
+    imageId: string,
+    organizationId: string,
+  ): Promise<FileMetadata[]> {
+    // Verify the image exists and belongs to the item
+    const image = await this.prisma.fileMetadata.findFirst({
+      where: {
+        id: imageId,
+        entityId: itemId,
+        organizationId,
+        type: 'item_image',
+      },
+    });
+
+    if (!image) {
+      throw new NotFoundException('Image not found for this item');
+    }
+
+    // Get all images for the item, ordered by current sort order
+    const allImages = await this.prisma.fileMetadata.findMany({
+      where: {
+        entityId: itemId,
+        organizationId,
+        type: 'item_image',
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    // Build new order: selected image first, then the rest in their current order
+    const reorderedIds = [
+      imageId,
+      ...allImages.filter((img) => img.id !== imageId).map((img) => img.id),
+    ];
+
+    // Update sort orders
+    await Promise.all(
+      reorderedIds.map((id, index) =>
+        this.prisma.fileMetadata.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+
+    return this.getItemImages(itemId, organizationId);
+  }
+
   async deleteFile(fileId: string, organizationId: string): Promise<void> {
     const file = await this.prisma.fileMetadata.findFirst({
       where: { id: fileId, organizationId },

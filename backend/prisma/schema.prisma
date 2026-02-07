@@ -1447,3 +1447,46 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+// ============================================
+// PUSH NOTIFICATIONS
+// ============================================
+
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  platform   String
+  deviceName String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("device_tokens")
+}
+
+model NotificationPreference {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  pickListAlerts Boolean @default(true)
+  lowStockAlerts Boolean @default(true)
+  grnAlerts      Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+model NotificationLog {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  body        String
+  type        String
+  referenceId String?
+  status      String    @default("pending")
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("notification_logs")
+}

@@ -24,10 +24,12 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { customersService, Customer, CreateCustomerRequest, CustomersListParams } from '@/services/customers-service';
+import { BulkImportWizard } from '@/components/ui';
 import type { ColumnsType } from 'antd/es/table';
 import type { MenuProps } from 'antd';
 
@@ -43,6 +45,7 @@ export default function CustomersPage() {
   const [searchText, setSearchText] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', params],
@@ -223,9 +226,14 @@ export default function CustomersPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <Title level={4} className="mb-0">Customers</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-          Add Customer
-        </Button>
+        <Space>
+          <Button icon={<ImportOutlined />} onClick={() => setShowImportWizard(true)}>
+            Import
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+            Add Customer
+          </Button>
+        </Space>
       </div>
 
       <Card>
@@ -347,6 +355,16 @@ export default function CustomersPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <BulkImportWizard
+        entityType="customers"
+        open={showImportWizard}
+        onClose={() => setShowImportWizard(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['customers'] });
+          message.success('Customers imported successfully');
+        }}
+      />
     </div>
   );
 }

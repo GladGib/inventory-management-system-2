@@ -17,18 +17,69 @@ import {
   Switch,
   Avatar,
   Upload,
+  Image,
+  Spin,
 } from 'antd';
-import { UserOutlined, UploadOutlined } from '@ant-design/icons';
+import { UserOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth-store';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { organizationsService } from '@/services/organizations-service';
+import { FileUpload } from '@/components/ui';
 
 const { Title, Text } = Typography;
 
 export default function SettingsPage() {
   const { message } = App.useApp();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [organizationForm] = Form.useForm();
+
+  // Fetch organization data
+  const { data: organization, isLoading: isLoadingOrg } = useQuery({
+    queryKey: ['organization', user?.organizationId],
+    queryFn: () => organizationsService.getOrganization(user!.organizationId),
+    enabled: !!user?.organizationId,
+  });
+
+  // Logo upload mutation
+  const uploadLogoMutation = useMutation({
+    mutationFn: (file: File) =>
+      organizationsService.uploadLogo(user!.organizationId, file),
+    onSuccess: () => {
+      message.success('Logo uploaded successfully');
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+    },
+    onError: (error: any) => {
+      message.error(error?.response?.data?.error?.message || 'Failed to upload logo');
+    },
+  });
+
+  // Logo delete mutation
+  const deleteLogoMutation = useMutation({
+    mutationFn: () => organizationsService.deleteLogo(user!.organizationId),
+    onSuccess: () => {
+      message.success('Logo deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+    },
+    onError: (error: any) => {
+      message.error(error?.response?.data?.error?.message || 'Failed to delete logo');
+    },
+  });
+
+  // Organization update mutation
+  const updateOrgMutation = useMutation({
+    mutationFn: (values: any) =>
+      organizationsService.updateOrganization(user!.organizationId, values),
+    onSuccess: () => {
+      message.success('Organization settings updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+    },
+    onError: (error: any) => {
+      message.error(error?.response?.data?.error?.message || 'Failed to update organization');
+    },
+  });
 
   const handleProfileUpdate = (values: any) => {
     console.log('Profile update:', values);
@@ -46,8 +97,15 @@ export default function SettingsPage() {
   };
 
   const handleOrganizationUpdate = (values: any) => {
-    console.log('Organization update:', values);
-    message.success('Organization settings updated successfully');
+    updateOrgMutation.mutate(values);
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    return uploadLogoMutation.mutateAsync(file);
+  };
+
+  const handleLogoDelete = async () => {
+    await deleteLogoMutation.mutateAsync();
   };
 
   return (
@@ -167,16 +225,82 @@ export default function SettingsPage() {
           {
             key: 'organization',
             label: 'Organization',
-            children: (
+            children: isLoadingOrg ? (
+              <div className="flex items-center justify-center py-12">
+                <Spin size="large" />
+              </div>
+            ) : (
               <Card title="Organization Settings">
+                {/* Logo Section */}
+                <div className="mb-6">
+                  <Title level={5} className="mb-4">Organization Logo</Title>
+                  <Row gutter={24}>
+                    <Col xs={24} md={8} className="text-center">
+                      {organization?.logoUrl ? (
+                        <div className="mb-4">
+                          <Image
+                            src={organizationsService.getLogoUrl(user!.organizationId)}
+                            alt="Organization Logo"
+                            className="rounded-lg shadow-sm"
+                            style={{ maxHeight: 200, objectFit: 'contain' }}
+                          />
+                          <div className="mt-3">
+                            <Button
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={handleLogoDelete}
+                              loading={deleteLogoMutation.isPending}
+                            >
+                              Remove Logo
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-4">
+                          <div className="w-48 h-48 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-3">
+                            <span className="text-gray-400 text-sm">No Logo</span>
+                          </div>
+                        </div>
+                      )}
+                    </Col>
+                    <Col xs={24} md={16}>
+                      <FileUpload
+                        accept="image/png,image/jpeg,image/jpg"
+                        maxSize={2 * 1024 * 1024}
+                        onUpload={handleLogoUpload}
+                        disabled={uploadLogoMutation.isPending}
+                      >
+                        <div className="p-4">
+                          <p className="ant-upload-drag-icon">
+                            <UploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                          </p>
+                          <p className="ant-upload-text text-base font-medium">
+                            Click or drag logo to upload
+                          </p>
+                          <p className="ant-upload-hint text-sm text-gray-500">
+                            PNG or JPG format, max 2MB
+                          </p>
+                        </div>
+                      </FileUpload>
+                    </Col>
+                  </Row>
+                </div>
+
+                <Divider />
+
                 <Form
                   form={organizationForm}
                   layout="vertical"
                   onFinish={handleOrganizationUpdate}
                   initialValues={{
-                    currency: 'MYR',
-                    taxRate: 0,
-                    defaultPaymentTerms: 30,
+                    name: organization?.name,
+                    phone: organization?.phone,
+                    address: organization?.address,
+                    currency: organization?.currency || 'MYR',
+                    taxRate: organization?.taxRate || 0,
+                    defaultPaymentTerms: organization?.defaultPaymentTerms || 30,
+                    autoGenerateCodes: organization?.autoGenerateCodes ?? true,
+                    allowNegativeStock: organization?.allowNegativeStock ?? false,
                   }}
                 >
                   <Row gutter={16}>
@@ -245,7 +369,11 @@ export default function SettingsPage() {
                   </Row>
 
                   <Form.Item>
-                    <Button type="primary" htmlType="submit">
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={updateOrgMutation.isPending}
+                    >
                       Save Settings
                     </Button>
                   </Form.Item>

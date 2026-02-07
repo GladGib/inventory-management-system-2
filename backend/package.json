@@ -20,7 +20,11 @@
     "db:migrate:prod": "prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "migration:run": "npx prisma migrate deploy",
+    "migration:revert": "npx prisma migrate reset --skip-seed --force",
+    "migration:status": "npx prisma migrate status",
+    "openapi:generate": "ts-node scripts/generate-openapi.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

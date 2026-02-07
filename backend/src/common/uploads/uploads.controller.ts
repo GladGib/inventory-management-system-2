@@ -231,6 +231,33 @@ export class UploadsController {
     }));
   }
 
+  @Patch('items/:itemId/images/:imageId/primary')
+  @ApiOperation({ summary: 'Set an image as the primary (first) image for an item' })
+  @ApiParam({ name: 'itemId', description: 'Item ID' })
+  @ApiParam({ name: 'imageId', description: 'Image ID to set as primary' })
+  @ApiResponse({ status: 200, description: 'Image set as primary' })
+  @ApiResponse({ status: 404, description: 'Image not found for this item' })
+  async setPrimaryImage(
+    @Param('itemId') itemId: string,
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const images = await this.uploadsService.setPrimaryImage(
+      itemId,
+      imageId,
+      user.organizationId,
+    );
+
+    return images.map((img) => ({
+      id: img.id,
+      filename: img.filename,
+      originalName: img.originalName,
+      size: img.size,
+      mimeType: img.mimeType,
+      isPrimary: img.id === imageId,
+    }));
+  }
+
   @Delete('items/:itemId/images/:imageId')
   @ApiOperation({ summary: 'Delete item image' })
   @ApiParam({ name: 'itemId', description: 'Item ID' })

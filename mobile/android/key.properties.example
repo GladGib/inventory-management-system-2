@@ -1,0 +1,15 @@
+# ---------------------------------------------------------------
+# Android Signing Configuration
+# ---------------------------------------------------------------
+# Copy this file to key.properties and fill in the values.
+# NEVER commit the actual key.properties file to version control.
+#
+# To generate a keystore:
+#   keytool -genkey -v -keystore ~/ims-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 \
+#     -alias ims-key
+
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=ims-key
+storeFile=/path/to/ims-release.jks

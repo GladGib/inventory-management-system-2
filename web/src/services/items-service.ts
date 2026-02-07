@@ -60,6 +60,18 @@ export interface CreateCategoryRequest {
   parentId?: string;
 }
 
+export interface ItemImage {
+  id: string;
+  itemId: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  isPrimary: boolean;
+  url?: string;
+  createdAt: string;
+}
+
 export interface ItemsListParams {
   page?: number;
   limit?: number;
@@ -120,5 +132,35 @@ export const itemsService = {
 
   deleteCategory: async (id: string): Promise<void> => {
     await apiClient.delete(`/categories/${id}`);
+  },
+
+  // Item Images
+  getItemImages: async (itemId: string): Promise<ItemImage[]> => {
+    const response = await apiClient.get<ApiResponse<ItemImage[]>>(`/items/${itemId}/images`);
+    return response.data.data;
+  },
+
+  uploadItemImage: async (itemId: string, file: File): Promise<ItemImage> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post<ApiResponse<ItemImage>>(
+      `/items/${itemId}/images`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  deleteItemImage: async (itemId: string, imageId: string): Promise<void> => {
+    await apiClient.delete(`/items/${itemId}/images/${imageId}`);
+  },
+
+  setItemImagePrimary: async (itemId: string, imageId: string): Promise<void> => {
+    await apiClient.put(`/items/${itemId}/images/${imageId}/primary`);
   },
 };

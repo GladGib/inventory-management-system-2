@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
+import * as path from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -45,6 +47,32 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  // Static file serving for uploads directory
+  const uploadDir = process.env.UPLOAD_DIR || './uploads';
+  app.use(
+    '/uploads',
+    express.static(path.resolve(uploadDir), {
+      maxAge: '1d',
+      etag: true,
+      setHeaders: (res, filePath) => {
+        // Set appropriate content-type headers for common image types
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.webp': 'image/webp',
+          '.gif': 'image/gif',
+          '.svg': 'image/svg+xml',
+          '.pdf': 'application/pdf',
+        };
+        if (mimeTypes[ext]) {
+          res.setHeader('Content-Type', mimeTypes[ext]);
+        }
+      },
+    }),
+  );
 
   const port = process.env.PORT || 3001;
   await app.listen(port);

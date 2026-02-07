@@ -389,6 +389,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                   actions={[
                     !address.isDefault && (
                       <Button
+                        key="default"
                         type="text"
                         size="small"
                         onClick={() => setDefaultAddressMutation.mutate(address.id)}
@@ -398,11 +399,13 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       </Button>
                     ),
                     <Button
+                      key="edit"
                       type="text"
                       icon={<EditOutlined />}
                       onClick={() => handleOpenAddressModal(address)}
                     />,
                     <Button
+                      key="delete"
                       type="text"
                       danger
                       icon={<DeleteOutlined />}

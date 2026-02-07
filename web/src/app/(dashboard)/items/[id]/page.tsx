@@ -1,10 +1,11 @@
 'use client';
 
-import { Typography, App, Spin } from 'antd';
+import { Typography, App, Spin, Card, Divider } from 'antd';
 import { useRouter, useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ItemForm } from '@/components/items/item-form';
 import { itemsService, CreateItemRequest } from '@/services/items-service';
+import { FileUpload, ImagePreview } from '@/components/ui';
 
 const { Title } = Typography;
 

@@ -24,11 +24,12 @@ import {
   BarcodeOutlined,
   ReloadOutlined,
   EyeOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { itemsService, Item, ItemsListParams } from '@/services/items-service';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, BulkImportWizard } from '@/components/ui';
 import type { ColumnsType } from 'antd/es/table';
 import type { MenuProps } from 'antd';
 
@@ -42,6 +43,7 @@ export default function ItemsPage() {
     limit: 20,
   });
   const [searchText, setSearchText] = useState('');
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['items', params],
@@ -235,6 +237,12 @@ export default function ItemsPage() {
               <Button icon={<BarcodeOutlined />}>Scan</Button>
             </Tooltip>
             <Button
+              icon={<ImportOutlined />}
+              onClick={() => setShowImportWizard(true)}
+            >
+              Import
+            </Button>
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => router.push('/items/new')}
@@ -343,6 +351,16 @@ export default function ItemsPage() {
           })}
         />
       </Card>
+
+      <BulkImportWizard
+        entityType="items"
+        open={showImportWizard}
+        onClose={() => setShowImportWizard(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['items'] });
+          message.success('Items imported successfully');
+        }}
+      />
     </div>
   );
 }

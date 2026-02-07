@@ -203,6 +203,29 @@ export class SalesService {
       throw new NotFoundException('Sales order not found');
     }
 
+    // Look up variant attributes for any VARIANT type items
+    const variantItemIds = order.lines
+      .filter((line: any) => line.item.type === 'VARIANT')
+      .map((line: any) => line.itemId);
+
+    const variantValues = variantItemIds.length > 0
+      ? await this.prisma.itemVariantValue.findMany({
+          where: { itemId: { in: variantItemIds } },
+          orderBy: { attribute: 'asc' },
+        })
+      : [];
+
+    // Group variant values by itemId for easy lookup
+    const variantValuesByItemId = new Map<string, string>();
+    for (const vv of variantValues) {
+      const existing = variantValuesByItemId.get(vv.itemId);
+      if (existing) {
+        variantValuesByItemId.set(vv.itemId, `${existing}, ${vv.value}`);
+      } else {
+        variantValuesByItemId.set(vv.itemId, vv.value);
+      }
+    }
+
     return {
       orderNumber: order.orderNumber,
       orderDate: order.orderDate,
@@ -224,14 +247,21 @@ export class SalesService {
             address: order.warehouse.address || undefined,
           }
         : undefined,
-      lines: order.lines.map((line: any) => ({
-        itemCode: line.item.code,
-        itemName: line.item.name,
-        quantity: line.quantity,
-        unitPrice: Number(line.unitPrice),
-        discount: Number(line.discountPct) * Number(line.lineTotal) / 100,
-        lineTotal: Number(line.lineTotal),
-      })),
+      lines: order.lines.map((line: any) => {
+        const variantSuffix = variantValuesByItemId.get(line.itemId);
+        const itemName = variantSuffix
+          ? `${line.item.name} - ${variantSuffix}`
+          : line.item.name;
+
+        return {
+          itemCode: line.item.code,
+          itemName,
+          quantity: line.quantity,
+          unitPrice: Number(line.unitPrice),
+          discount: Number(line.discountPct) * Number(line.lineTotal) / 100,
+          lineTotal: Number(line.lineTotal),
+        };
+      }),
       subtotal: Number(order.subtotal),
       discountAmount: Number(order.discountAmount) || 0,
       taxAmount: Number(order.taxAmount),
@@ -709,6 +739,13 @@ export class SalesService {
 
       if (!item) {
         throw new NotFoundException(`Item ${line.itemId} not found`);
+      }
+
+      // Prevent adding a variant parent directly - user must select a specific variant
+      if (item.type === 'VARIANT_PARENT') {
+        throw new BadRequestException(
+          `Item "${item.name}" (${item.code}) is a variant parent. Please select a specific variant instead.`,
+        );
       }
 
       const unitPrice = line.unitPrice ?? Number(item.sellingPrice);

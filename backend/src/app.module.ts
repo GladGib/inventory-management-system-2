@@ -21,7 +21,9 @@ import { SalesReturnsModule } from './modules/sales-returns/sales-returns.module
 import { CreditNotesModule } from './modules/credit-notes/credit-notes.module';
 import { BillsModule } from './modules/bills/bills.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -49,8 +51,9 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     CreditNotesModule,
     BillsModule,
     ReportsModule,
+    NotificationsModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [
     // Apply JwtAuthGuard globally - use @Public() to skip auth
     {
