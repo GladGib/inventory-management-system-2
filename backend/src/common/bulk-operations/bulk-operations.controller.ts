@@ -59,6 +59,9 @@ export class BulkOperationsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
+  @ApiResponse({ status: 200, description: 'Validation result' })
+  @ApiResponse({ status: 400, description: 'No file provided or invalid CSV' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseInterceptors(FileInterceptor('file'))
   async validateItemImport(
     @UploadedFile() file: Express.Multer.File,
@@ -83,6 +86,9 @@ export class BulkOperationsController {
       },
     },
   })
+  @ApiResponse({ status: 201, description: 'Import result' })
+  @ApiResponse({ status: 400, description: 'No file provided or validation errors' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseInterceptors(FileInterceptor('file'))
   async importItems(
     @UploadedFile() file: Express.Multer.File,
@@ -106,6 +112,7 @@ export class BulkOperationsController {
 
   @Get('customers/template')
   @ApiOperation({ summary: 'Download customer import CSV template' })
+  @ApiResponse({ status: 200, description: 'CSV template file' })
   getCustomerTemplate(@Res() res: Response) {
     const csv = this.bulkService.getCustomerTemplate();
     res.setHeader('Content-Type', 'text/csv');
@@ -122,6 +129,9 @@ export class BulkOperationsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
+  @ApiResponse({ status: 201, description: 'Import result' })
+  @ApiResponse({ status: 400, description: 'No file provided or validation errors' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseInterceptors(FileInterceptor('file'))
   async importCustomers(
     @UploadedFile() file: Express.Multer.File,
@@ -140,6 +150,7 @@ export class BulkOperationsController {
 
   @Get('vendors/template')
   @ApiOperation({ summary: 'Download vendor import CSV template' })
+  @ApiResponse({ status: 200, description: 'CSV template file' })
   getVendorTemplate(@Res() res: Response) {
     const csv = this.bulkService.getVendorTemplate();
     res.setHeader('Content-Type', 'text/csv');
@@ -156,6 +167,9 @@ export class BulkOperationsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
+  @ApiResponse({ status: 201, description: 'Import result' })
+  @ApiResponse({ status: 400, description: 'No file provided or validation errors' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseInterceptors(FileInterceptor('file'))
   async importVendors(
     @UploadedFile() file: Express.Multer.File,
@@ -176,6 +190,8 @@ export class BulkOperationsController {
   @ApiOperation({ summary: 'Export stock valuation report to Excel' })
   @ApiQuery({ name: 'warehouseId', required: false })
   @ApiQuery({ name: 'categoryId', required: false })
+  @ApiResponse({ status: 200, description: 'Excel file' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async exportStockValuation(
     @CurrentUser() user: JwtPayload,
     @Query('warehouseId') warehouseId?: string,
@@ -197,6 +213,9 @@ export class BulkOperationsController {
   @ApiOperation({ summary: 'Export sales by customer report to Excel' })
   @ApiQuery({ name: 'startDate', required: true })
   @ApiQuery({ name: 'endDate', required: true })
+  @ApiResponse({ status: 200, description: 'Excel file' })
+  @ApiResponse({ status: 400, description: 'Missing date parameters' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async exportSalesByCustomer(
     @CurrentUser() user: JwtPayload,
     @Query('startDate') startDate: string,

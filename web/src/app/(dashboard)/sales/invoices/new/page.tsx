@@ -29,7 +29,7 @@ import {
   CreateInvoiceRequest,
 } from '@/services/invoices-service';
 import { customersService } from '@/services/customers-service';
-import { itemsService, Item } from '@/services/items-service';
+import { itemsService, Item, VariantItem, ItemWithVariants } from '@/services/items-service';
 
 const { Text, Title } = Typography;
 
@@ -38,6 +38,7 @@ interface InvoiceLineItem {
   itemId: string;
   itemCode: string;
   itemName: string;
+  variantAttributes?: string;
   description?: string;
   quantity: number;
   unitPrice: number;
@@ -51,6 +52,9 @@ export default function NewInvoicePage() {
   const [form] = Form.useForm();
   const [items, setItems] = useState<InvoiceLineItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<VariantItem | null>(null);
+  const [itemVariants, setItemVariants] = useState<ItemWithVariants | null>(null);
+  const [loadingVariants, setLoadingVariants] = useState(false);
 
   const { data: customersData } = useQuery({
     queryKey: ['customers-list'],
@@ -79,25 +83,62 @@ export default function NewInvoicePage() {
       return;
     }
 
-    const existingItem = items.find((i) => i.itemId === selectedItem.id);
-    if (existingItem) {
-      message.warning('Item already added. Update quantity instead.');
-      return;
+    // Check if item is a VARIANT_PARENT - requires variant selection
+    if (selectedItem.type === 'VARIANT_PARENT') {
+      if (!selectedVariant) {
+        message.warning('Please select a variant for this item');
+        return;
+      }
+
+      const existingItem = items.find((i) => i.itemId === selectedVariant.id);
+      if (existingItem) {
+        message.warning('This variant is already added. Update quantity instead.');
+        return;
+      }
+
+      // Format variant attributes for display (e.g., "Red / Large")
+      const variantAttrDisplay = selectedVariant.attributes
+        .map((attr) => attr.value)
+        .join(' / ');
+
+      const newItem: InvoiceLineItem = {
+        key: Date.now().toString(),
+        itemId: selectedVariant.id,
+        itemCode: selectedVariant.code,
+        itemName: selectedItem.name,
+        variantAttributes: variantAttrDisplay,
+        quantity: 1,
+        unitPrice: selectedVariant.sellingPrice || 0,
+        discountPercent: 0,
+        lineTotal: selectedVariant.sellingPrice || 0,
+      };
+
+      setItems([...items, newItem]);
+      setSelectedItem(null);
+      setSelectedVariant(null);
+      setItemVariants(null);
+    } else {
+      // Regular item (SIMPLE, VARIANT, BUNDLE)
+      const existingItem = items.find((i) => i.itemId === selectedItem.id);
+      if (existingItem) {
+        message.warning('Item already added. Update quantity instead.');
+        return;
+      }
+
+      const newItem: InvoiceLineItem = {
+        key: Date.now().toString(),
+        itemId: selectedItem.id,
+        itemCode: selectedItem.code,
+        itemName: selectedItem.name,
+        quantity: 1,
+        unitPrice: selectedItem.sellingPrice || 0,
+        discountPercent: 0,
+        lineTotal: selectedItem.sellingPrice || 0,
+      };
+
+      setItems([...items, newItem]);
+      setSelectedItem(null);
     }
-
-    const newItem: InvoiceLineItem = {
-      key: Date.now().toString(),
-      itemId: selectedItem.id,
-      itemCode: selectedItem.code,
-      itemName: selectedItem.name,
-      quantity: 1,
-      unitPrice: selectedItem.sellingPrice || 0,
-      discountPercent: 0,
-      lineTotal: selectedItem.sellingPrice || 0,
-    };
-
-    setItems([...items, newItem]);
-    setSelectedItem(null);
   };
 
   const handleUpdateItem = (key: string, field: string, value: any) => {
@@ -117,6 +158,25 @@ export default function NewInvoicePage() {
 
   const handleRemoveItem = (key: string) => {
     setItems(items.filter((item) => item.key !== key));
+  };
+
+  const handleItemSelect = async (itemId: string) => {
+    const item = itemsData?.data?.find((i) => i.id === itemId);
+    setSelectedItem(item || null);
+    setSelectedVariant(null);
+    setItemVariants(null);
+
+    if (item && item.type === 'VARIANT_PARENT') {
+      setLoadingVariants(true);
+      try {
+        const variants = await itemsService.getItemVariants(itemId);
+        setItemVariants(variants);
+      } catch (error: any) {
+        message.error(error.response?.data?.error?.message || 'Failed to load variants');
+      } finally {
+        setLoadingVariants(false);
+      }
+    }
   };
 
   const handleSubmit = (values: any) => {
@@ -163,6 +223,9 @@ export default function NewInvoicePage() {
         <div>
           <div className="font-mono text-xs text-gray-500">{record.itemCode}</div>
           <div>{record.itemName}</div>
+          {record.variantAttributes && (
+            <div className="text-xs text-blue-600 mt-1">{record.variantAttributes}</div>
+          )}
         </div>
       ),
     },
@@ -329,17 +392,14 @@ export default function NewInvoicePage() {
 
             <Card title="Invoice Items" className="mb-6">
               <div className="mb-4">
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                   <Select
                     showSearch
                     placeholder="Search and select item to add..."
                     optionFilterProp="label"
                     className="flex-1"
                     value={selectedItem?.id}
-                    onChange={(value) => {
-                      const item = itemsData?.data?.find((i) => i.id === value);
-                      setSelectedItem(item || null);
-                    }}
+                    onChange={handleItemSelect}
                     options={itemsData?.data?.map((item) => ({
                       value: item.id,
                       label: `${item.code} - ${item.name}`,
@@ -349,6 +409,38 @@ export default function NewInvoicePage() {
                     Add Item
                   </Button>
                 </div>
+
+                {selectedItem?.type === 'VARIANT_PARENT' && (
+                  <div className="mt-2">
+                    <Select
+                      showSearch
+                      placeholder="Select a variant..."
+                      optionFilterProp="label"
+                      className="w-full"
+                      value={selectedVariant?.id}
+                      onChange={(value) => {
+                        const variant = itemVariants?.variants.find((v) => v.id === value);
+                        setSelectedVariant(variant || null);
+                      }}
+                      loading={loadingVariants}
+                      disabled={loadingVariants}
+                      options={itemVariants?.variants.map((variant) => {
+                        const attrDisplay = variant.attributes
+                          .map((attr) => `${attr.attribute}: ${attr.value}`)
+                          .join(' | ');
+                        return {
+                          value: variant.id,
+                          label: `${attrDisplay} - RM${variant.sellingPrice.toFixed(2)} (Stock: ${variant.stockOnHand})`,
+                        };
+                      })}
+                    />
+                    {!selectedVariant && (
+                      <Text type="secondary" className="text-xs mt-1 block">
+                        This item has variants. Please select a specific variant before adding.
+                      </Text>
+                    )}
+                  </div>
+                )}
               </div>
 
               {items.length > 0 ? (

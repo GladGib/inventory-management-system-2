@@ -36,12 +36,13 @@ class StockCountNotifier extends StateNotifier<StockCountState> {
 
   StockCountNotifier() : super(StockCountState());
 
-  Future<void> loadStockCounts() async {
+  Future<void> loadStockCounts({String? warehouseId}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
       final response = await _apiClient.dio.get('/inventory/stock-counts', queryParameters: {
         'limit': 50,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final counts = (response.data['data'] as List)

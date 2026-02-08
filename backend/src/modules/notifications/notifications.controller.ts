@@ -29,6 +29,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Register a device token for push notifications' })
   @ApiResponse({ status: 201, description: 'Device registered' })
   @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async registerDevice(
     @CurrentUser('userId') userId: string,
     @Body() dto: RegisterDeviceDto,
@@ -40,6 +41,8 @@ export class NotificationsController {
   @Delete('devices/:token')
   @ApiOperation({ summary: 'Unregister a device token' })
   @ApiResponse({ status: 200, description: 'Device unregistered' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Device token not found' })
   async unregisterDevice(
     @Param('token') token: string,
   ) {
@@ -50,6 +53,7 @@ export class NotificationsController {
   @Get('users/me/notification-preferences')
   @ApiOperation({ summary: 'Get current user notification preferences' })
   @ApiResponse({ status: 200, description: 'Notification preferences' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getPreferences(
     @CurrentUser('userId') userId: string,
   ) {
@@ -60,6 +64,8 @@ export class NotificationsController {
   @Put('users/me/notification-preferences')
   @ApiOperation({ summary: 'Update current user notification preferences' })
   @ApiResponse({ status: 200, description: 'Preferences updated' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updatePreferences(
     @CurrentUser('userId') userId: string,
     @Body() dto: UpdatePreferencesDto,
@@ -73,6 +79,7 @@ export class NotificationsController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Notification log' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getNotifications(
     @CurrentUser('userId') userId: string,
     @Query('page') page?: number,

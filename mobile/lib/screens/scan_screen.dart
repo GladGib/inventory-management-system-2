@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../providers/items_provider.dart';
+import '../providers/warehouse_provider.dart';
 import '../models/item.dart';
 import '../core/theme.dart';
 import 'package:intl/intl.dart';
@@ -47,8 +48,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       _errorMessage = null;
     });
 
-    // Look up item by barcode
-    final item = await ref.read(itemsProvider.notifier).getItemByBarcode(barcode);
+    // Look up item by barcode, scoped to selected warehouse
+    final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+    final item = await ref.read(itemsProvider.notifier).getItemByBarcode(barcode, warehouseId: warehouseId);
 
     setState(() {
       _isLoading = false;

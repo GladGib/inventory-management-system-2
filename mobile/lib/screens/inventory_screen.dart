@@ -63,6 +63,7 @@ class _ItemsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsState = ref.watch(itemsProvider);
+    final selectedWarehouse = ref.watch(selectedWarehouseProvider);
     final currencyFormat = NumberFormat.currency(symbol: 'RM ', decimalDigits: 2);
 
     return Column(
@@ -79,13 +80,18 @@ class _ItemsTab extends ConsumerWidget {
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         searchController.clear();
-                        ref.read(itemsProvider.notifier).loadItems();
+                        ref.read(itemsProvider.notifier).loadItems(
+                              warehouseId: selectedWarehouse?.id,
+                            );
                       },
                     )
                   : null,
             ),
             onSubmitted: (value) {
-              ref.read(itemsProvider.notifier).loadItems(search: value);
+              ref.read(itemsProvider.notifier).loadItems(
+                    search: value,
+                    warehouseId: selectedWarehouse?.id,
+                  );
             },
           ),
         ),
@@ -94,7 +100,9 @@ class _ItemsTab extends ConsumerWidget {
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: () async {
-                    ref.read(itemsProvider.notifier).refresh();
+                    ref.read(itemsProvider.notifier).loadItems(
+                          warehouseId: selectedWarehouse?.id,
+                        );
                   },
                   child: ListView.builder(
                     itemCount: itemsState.items.length,

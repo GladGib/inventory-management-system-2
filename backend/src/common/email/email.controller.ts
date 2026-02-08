@@ -36,6 +36,7 @@ export class EmailController {
   @Get('email/test-connection')
   @ApiOperation({ summary: 'Test SMTP connection' })
   @ApiResponse({ status: 200, description: 'Connection test result' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async testConnection() {
     return this.emailService.testConnection();
   }
@@ -45,6 +46,8 @@ export class EmailController {
   @ApiParam({ name: 'id', description: 'Purchase Order ID' })
   @ApiResponse({ status: 200, description: 'Email sent successfully' })
   @ApiResponse({ status: 400, description: 'Vendor has no email' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Purchase order not found' })
   async sendPurchaseOrderEmail(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload,
@@ -111,6 +114,8 @@ export class EmailController {
   @ApiParam({ name: 'id', description: 'Invoice ID' })
   @ApiResponse({ status: 200, description: 'Email sent successfully' })
   @ApiResponse({ status: 400, description: 'Customer has no email' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
   async sendInvoiceEmail(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload,

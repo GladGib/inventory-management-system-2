@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/purchase_order.dart';
 import '../providers/goods_receiving_provider.dart';
+import '../providers/warehouse_provider.dart';
 import '../core/theme.dart';
 
 class GoodsReceivingScreen extends ConsumerStatefulWidget {
@@ -20,8 +21,9 @@ class _GoodsReceivingScreenState extends ConsumerState<GoodsReceivingScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(goodsReceivingProvider.notifier).loadOrdersToReceive();
-      ref.read(goodsReceivingProvider.notifier).loadRecentGRNs();
+      final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+      ref.read(goodsReceivingProvider.notifier).loadOrdersToReceive(warehouseId: warehouseId);
+      ref.read(goodsReceivingProvider.notifier).loadRecentGRNs(warehouseId: warehouseId);
     });
   }
 
@@ -34,6 +36,7 @@ class _GoodsReceivingScreenState extends ConsumerState<GoodsReceivingScreen>
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(goodsReceivingProvider);
+    final selectedWarehouse = ref.watch(selectedWarehouseProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -48,7 +51,11 @@ class _GoodsReceivingScreenState extends ConsumerState<GoodsReceivingScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(goodsReceivingProvider.notifier).refresh(),
+            onPressed: () {
+              final warehouseId = selectedWarehouse?.id;
+              ref.read(goodsReceivingProvider.notifier).loadOrdersToReceive(warehouseId: warehouseId);
+              ref.read(goodsReceivingProvider.notifier).loadRecentGRNs(warehouseId: warehouseId);
+            },
           ),
         ],
       ),
@@ -75,7 +82,8 @@ class _GoodsReceivingScreenState extends ConsumerState<GoodsReceivingScreen>
 
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(goodsReceivingProvider.notifier).loadOrdersToReceive();
+        final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+        await ref.read(goodsReceivingProvider.notifier).loadOrdersToReceive(warehouseId: warehouseId);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -99,7 +107,8 @@ class _GoodsReceivingScreenState extends ConsumerState<GoodsReceivingScreen>
 
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(goodsReceivingProvider.notifier).loadRecentGRNs();
+        final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+        await ref.read(goodsReceivingProvider.notifier).loadRecentGRNs(warehouseId: warehouseId);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -613,7 +622,9 @@ class _GoodsReceivingProcessScreenState
   }
 
   void _createGRN() async {
+    final warehouseId = ref.read(selectedWarehouseProvider)?.id;
     final grn = await ref.read(goodsReceivingProvider.notifier).createGRN(
+          warehouseId: warehouseId,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         );
 

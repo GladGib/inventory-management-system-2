@@ -32,6 +32,10 @@ dependencies:
   cupertino_icons: ^1.0.6
   flutter_spinkit: ^5.2.0
 
+  # Firebase
+  firebase_core: ^3.12.1
+  firebase_messaging: ^15.2.4
+
   # Utils
   intl: ^0.19.0
   connectivity_plus: ^5.0.2

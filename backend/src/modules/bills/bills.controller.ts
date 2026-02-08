@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators';
 import { BillsService } from './bills.service';
@@ -32,6 +32,9 @@ export class BillsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a bill' })
+  @ApiResponse({ status: 201, description: 'Bill created' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   create(
     @CurrentUser('organizationId') organizationId: string,
     @Body() dto: CreateBillDto,
@@ -41,6 +44,10 @@ export class BillsController {
 
   @Post('from-grn')
   @ApiOperation({ summary: 'Create bill from goods received note' })
+  @ApiResponse({ status: 201, description: 'Bill created from GRN' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'GRN not found' })
+  @ApiBody({ schema: { type: 'object', properties: { grnId: { type: 'string' } }, required: ['grnId'] } })
   createFromGRN(
     @CurrentUser('organizationId') organizationId: string,
     @Body('grnId') grnId: string,
@@ -50,6 +57,8 @@ export class BillsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all bills' })
+  @ApiResponse({ status: 200, description: 'Bills list' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
     @Query() query: BillQueryDto,
@@ -59,6 +68,9 @@ export class BillsController {
 
   @Get('payment-summary')
   @ApiOperation({ summary: 'Get payment summary' })
+  @ApiQuery({ name: 'vendorId', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Payment summary' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   getPaymentSummary(
     @CurrentUser('organizationId') organizationId: string,
     @Query('vendorId') vendorId?: string,
@@ -68,6 +80,10 @@ export class BillsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a bill by ID' })
+  @ApiParam({ name: 'id', description: 'Bill ID' })
+  @ApiResponse({ status: 200, description: 'Bill found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Bill not found' })
   findOne(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -77,6 +93,11 @@ export class BillsController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update a bill' })
+  @ApiParam({ name: 'id', description: 'Bill ID' })
+  @ApiResponse({ status: 200, description: 'Bill updated' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Bill not found' })
   update(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -87,6 +108,11 @@ export class BillsController {
 
   @Post(':id/payments')
   @ApiOperation({ summary: 'Record payment for a bill' })
+  @ApiParam({ name: 'id', description: 'Bill ID' })
+  @ApiResponse({ status: 201, description: 'Payment recorded' })
+  @ApiResponse({ status: 400, description: 'Amount exceeds balance' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Bill not found' })
   recordPayment(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -97,6 +123,11 @@ export class BillsController {
 
   @Post(':id/void')
   @ApiOperation({ summary: 'Void a bill' })
+  @ApiParam({ name: 'id', description: 'Bill ID' })
+  @ApiResponse({ status: 200, description: 'Bill voided' })
+  @ApiResponse({ status: 400, description: 'Cannot void bill' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Bill not found' })
   voidBill(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -106,6 +137,11 @@ export class BillsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a bill' })
+  @ApiParam({ name: 'id', description: 'Bill ID' })
+  @ApiResponse({ status: 200, description: 'Bill deleted' })
+  @ApiResponse({ status: 400, description: 'Cannot delete bill' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Bill not found' })
   delete(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -123,6 +159,8 @@ export class PaymentsMadeController {
 
   @Get()
   @ApiOperation({ summary: 'Get all payments made' })
+  @ApiResponse({ status: 200, description: 'Payments made list' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
     @Query() query: PaymentsMadeQueryDto,
@@ -140,6 +178,9 @@ export class VendorCreditNotesController {
 
   @Post()
   @ApiOperation({ summary: 'Create a vendor credit note' })
+  @ApiResponse({ status: 201, description: 'Vendor credit note created' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   create(
     @CurrentUser('organizationId') organizationId: string,
     @Body() dto: CreateVendorCreditNoteDto,
@@ -149,6 +190,12 @@ export class VendorCreditNotesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all vendor credit notes' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'vendorId', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Vendor credit notes list' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   findAll(
     @CurrentUser('organizationId') organizationId: string,
     @Query('page') page?: number,
@@ -161,6 +208,10 @@ export class VendorCreditNotesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get vendor credit note by ID' })
+  @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
+  @ApiResponse({ status: 200, description: 'Vendor credit note found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Vendor credit note not found' })
   findOne(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -170,6 +221,11 @@ export class VendorCreditNotesController {
 
   @Post(':id/issue')
   @ApiOperation({ summary: 'Issue vendor credit note' })
+  @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
+  @ApiResponse({ status: 200, description: 'Vendor credit note issued' })
+  @ApiResponse({ status: 400, description: 'Cannot issue credit note' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Vendor credit note not found' })
   issue(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -179,6 +235,11 @@ export class VendorCreditNotesController {
 
   @Post(':id/apply')
   @ApiOperation({ summary: 'Apply vendor credit note to bill' })
+  @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
+  @ApiResponse({ status: 200, description: 'Credit note applied to bill' })
+  @ApiResponse({ status: 400, description: 'Invalid application' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Credit note or bill not found' })
   apply(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,
@@ -189,6 +250,11 @@ export class VendorCreditNotesController {
 
   @Post(':id/void')
   @ApiOperation({ summary: 'Void vendor credit note' })
+  @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
+  @ApiResponse({ status: 200, description: 'Vendor credit note voided' })
+  @ApiResponse({ status: 400, description: 'Cannot void credit note' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Vendor credit note not found' })
   void(
     @CurrentUser('organizationId') organizationId: string,
     @Param('id') id: string,

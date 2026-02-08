@@ -137,7 +137,21 @@ export default function ItemsPage() {
       ellipsis: true,
       render: (name: string, record: Item) => (
         <div>
-          <span className="font-medium text-gray-900">{name}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900">{name}</span>
+            {record.type === 'SIMPLE' && (
+              <Tag color="blue" className="!text-xs !py-0 !px-1.5">Simple</Tag>
+            )}
+            {record.type === 'VARIANT_PARENT' && (
+              <Tag color="purple" className="!text-xs !py-0 !px-1.5">Parent</Tag>
+            )}
+            {record.type === 'VARIANT' && (
+              <Tag color="cyan" className="!text-xs !py-0 !px-1.5">Variant</Tag>
+            )}
+            {record.type === 'BUNDLE' && (
+              <Tag color="orange" className="!text-xs !py-0 !px-1.5">Bundle</Tag>
+            )}
+          </div>
           {record.description && (
             <p className="text-xs text-gray-500 mt-0.5 truncate">{record.description}</p>
           )}
@@ -155,6 +169,42 @@ export default function ItemsPage() {
         ) : (
           <span className="text-gray-400">-</span>
         ),
+    },
+    {
+      title: 'Variants',
+      key: 'variants',
+      width: 100,
+      align: 'center',
+      render: (_: any, record: Item) => {
+        if (record.type === 'VARIANT_PARENT' && record.variantCount) {
+          return (
+            <Tag color="purple" className="!text-xs">
+              {record.variantCount} {record.variantCount === 1 ? 'variant' : 'variants'}
+            </Tag>
+          );
+        }
+        return <span className="text-gray-400">-</span>;
+      },
+    },
+    {
+      title: 'Stock',
+      key: 'stock',
+      width: 100,
+      align: 'right',
+      render: (_: any, record: Item) => {
+        if (record.type === 'VARIANT_PARENT' && record.totalStock !== undefined) {
+          const stockClass = record.totalStock === 0 ? 'text-red-500' : record.totalStock < 10 ? 'text-orange-500' : 'text-gray-900';
+          return (
+            <span className={`font-medium ${stockClass}`}>
+              {record.totalStock}
+            </span>
+          );
+        }
+        if (record.type === 'SIMPLE' && record.trackInventory) {
+          return <span className="text-gray-400">-</span>;
+        }
+        return <span className="text-gray-400">-</span>;
+      },
     },
     {
       title: 'Cost',

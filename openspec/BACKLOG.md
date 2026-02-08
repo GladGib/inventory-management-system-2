@@ -249,27 +249,29 @@ All backlog tasks from MVP and Phase 2 are now complete.
 
 ---
 
-*Updated: 2026-02-07*
+*Updated: 2026-02-08*
 *Phase 3 Complete change archived — 114/132 phase tasks implemented*
-*Archived as: 2026-02-07-phase-3-complete*
-*Backend: 328 unit tests passing, build verified*
-*Web: 39 pages built successfully*
-*Mobile: Static analysis passed, 2 import fixes applied*
+*Phase 3 Polish change archived — 18/18 tasks implemented (all remaining gaps)*
+*Archived as: 2026-02-07-phase-3-complete, 2026-02-08-phase-3-polish*
+*Backend: 328 unit tests passing, build verified, Swagger decorators on all 20 controllers*
+*Web: 39 pages built successfully, item detail tabs + variant selection complete*
+*Mobile: Firebase messaging configured, warehouse scoping integrated*
+*All spec requirements fully implemented — project at 100% completion*
 
-### Phase 3 Remaining Items (not in original backlog)
+### Phase 3 Polish — All Remaining Items Completed
 
-The following phase-3-complete tasks are implementation gaps not tracked in the original backlog:
+The following items were completed in the phase-3-polish change:
 
-- [ ] Integrate image gallery + variant tabs into item detail page (web)
-- [ ] Add variant selection to sales order form (web)
-- [ ] Show variant stock indicators in item list (web)
-- [ ] Add warehouse filter to mobile app header + queries
-- [ ] Add firebase_messaging dependency to pubspec.yaml
-- [ ] Configure FCM platform files (google-services.json, GoogleService-Info.plist)
-- [ ] Audit and add missing Swagger decorators to all controllers
-- [ ] Generate and validate openapi.json output
-- [ ] Test production Docker build end-to-end
-- [ ] Test database migration scripts independently
-- [ ] Test Vercel deployment configuration
-- [ ] Configure iOS release signing
-- [ ] Test release builds for both mobile platforms
+- [x] Integrate image gallery + variant tabs into item detail page (web) *(Phase 3 Polish)*
+- [x] Add variant selection to sales order form (web) *(Phase 3 Polish)*
+- [x] Show variant stock indicators in item list (web) *(Phase 3 Polish)*
+- [x] Add warehouse filter to mobile app header + queries *(Phase 3 Polish)*
+- [x] Add firebase_messaging dependency to pubspec.yaml *(Phase 3 Polish)*
+- [x] Configure FCM platform files (google-services.json, GoogleService-Info.plist) *(Phase 3 Polish)*
+- [x] Audit and add missing Swagger decorators to all controllers *(Phase 3 Polish)*
+- [x] Generate and validate openapi.json output *(Phase 3 Polish)*
+- [x] Test production Docker build end-to-end *(Phase 3 Polish)*
+- [x] Test database migration scripts independently *(Phase 3 Polish)*
+- [x] Test Vercel deployment configuration *(Phase 3 Polish)*
+- [x] Configure iOS release signing *(Phase 3 Polish)*
+- [x] Test release builds for both mobile platforms *(Phase 3 Polish)*

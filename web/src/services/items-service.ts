@@ -20,6 +20,8 @@ export interface Item {
   reorderPoint?: number;
   reorderQty?: number;
   isActive: boolean;
+  variantCount?: number;
+  totalStock?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -79,6 +81,51 @@ export interface ItemsListParams {
   categoryId?: string;
   isActive?: boolean;
   type?: string;
+}
+
+export interface VariantValue {
+  attribute: string;
+  value: string;
+}
+
+export interface VariantItem {
+  id: string;
+  code: string;
+  name: string;
+  barcode?: string;
+  costPrice: number;
+  sellingPrice: number;
+  isActive: boolean;
+  attributes: VariantValue[];
+  stockOnHand: number;
+}
+
+export interface VariantAttribute {
+  name: string;
+  values: string[];
+}
+
+export interface ItemWithVariants {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  variantAttributes: VariantAttribute[];
+  variants: VariantItem[];
+  totalStock: number;
+}
+
+export interface CreateVariantsRequest {
+  attributes: VariantAttribute[];
+  basePrice?: number;
+}
+
+export interface UpdateVariantRequest {
+  code?: string;
+  barcode?: string;
+  costPrice?: number;
+  sellingPrice?: number;
+  isActive?: boolean;
 }
 
 export const itemsService = {
@@ -162,5 +209,25 @@ export const itemsService = {
 
   setItemImagePrimary: async (itemId: string, imageId: string): Promise<void> => {
     await apiClient.put(`/items/${itemId}/images/${imageId}/primary`);
+  },
+
+  // Variants
+  getItemVariants: async (itemId: string): Promise<ItemWithVariants> => {
+    const response = await apiClient.get<ApiResponse<ItemWithVariants>>(`/items/${itemId}/variants`);
+    return response.data.data;
+  },
+
+  createVariants: async (itemId: string, data: CreateVariantsRequest): Promise<ItemWithVariants> => {
+    const response = await apiClient.post<ApiResponse<ItemWithVariants>>(`/items/${itemId}/variants`, data);
+    return response.data.data;
+  },
+
+  updateVariant: async (itemId: string, variantId: string, data: UpdateVariantRequest): Promise<VariantItem> => {
+    const response = await apiClient.put<ApiResponse<VariantItem>>(`/items/${itemId}/variants/${variantId}`, data);
+    return response.data.data;
+  },
+
+  deleteVariants: async (itemId: string): Promise<void> => {
+    await apiClient.delete(`/items/${itemId}/variants`);
   },
 };

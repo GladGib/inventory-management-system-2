@@ -41,13 +41,14 @@ class PickListNotifier extends StateNotifier<PickListState> {
 
   PickListNotifier() : super(PickListState());
 
-  Future<void> loadOrdersReadyForPicking() async {
+  Future<void> loadOrdersReadyForPicking({String? warehouseId}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
       final response = await _apiClient.dio.get('/sales-orders', queryParameters: {
         'status': 'CONFIRMED',
         'limit': 100,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final data = response.data;
@@ -59,6 +60,7 @@ class PickListNotifier extends StateNotifier<PickListState> {
       final pickingResponse = await _apiClient.dio.get('/sales-orders', queryParameters: {
         'status': 'PICKING',
         'limit': 100,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final pickingOrders = (pickingResponse.data['data'] as List)

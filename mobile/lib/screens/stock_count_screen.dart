@@ -18,13 +18,15 @@ class _StockCountScreenState extends ConsumerState<StockCountScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(stockCountProvider.notifier).loadStockCounts();
+      final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+      ref.read(stockCountProvider.notifier).loadStockCounts(warehouseId: warehouseId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(stockCountProvider);
+    final selectedWarehouse = ref.watch(selectedWarehouseProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -32,7 +34,9 @@ class _StockCountScreenState extends ConsumerState<StockCountScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(stockCountProvider.notifier).refresh(),
+            onPressed: () => ref.read(stockCountProvider.notifier).loadStockCounts(
+                  warehouseId: selectedWarehouse?.id,
+                ),
           ),
         ],
       ),
@@ -86,7 +90,8 @@ class _StockCountScreenState extends ConsumerState<StockCountScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(stockCountProvider.notifier).loadStockCounts();
+        final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+        await ref.read(stockCountProvider.notifier).loadStockCounts(warehouseId: warehouseId);
       },
       child: ListView(
         padding: const EdgeInsets.all(16),

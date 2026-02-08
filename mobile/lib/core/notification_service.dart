@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'api_client.dart';
 import 'theme.dart';
 
@@ -60,13 +63,16 @@ class NotificationState {
   }
 }
 
-/// Service that manages push notifications.
+/// Service that manages push notifications via Firebase Cloud Messaging (FCM).
 ///
-/// This uses placeholder implementations for FCM initialization.
-/// To enable real push notifications:
-/// 1. Add firebase_messaging to pubspec.yaml
-/// 2. Configure Firebase for your project
-/// 3. Uncomment the FCM-related code below
+/// To configure push notifications:
+/// 1. Set up a Firebase project at https://console.firebase.google.com/
+/// 2. Add your Android/iOS apps to the project
+/// 3. Download google-services.json (Android) and/or GoogleService-Info.plist (iOS)
+/// 4. Place them in the appropriate directories (see .example files)
+///
+/// If Firebase is not configured, the service will initialize gracefully
+/// without FCM capabilities -- the app will still function normally.
 class NotificationService extends StateNotifier<NotificationState> {
   final ApiClient _apiClient = ApiClient();
 
@@ -90,63 +96,113 @@ class NotificationService extends StateNotifier<NotificationState> {
 
   /// Initialize the notification service
   Future<void> _initialize() async {
-    // --- FCM Initialization Placeholder ---
-    //
-    // In production, uncomment and configure:
-    //
-    // import 'package:firebase_messaging/firebase_messaging.dart';
-    //
-    // final messaging = FirebaseMessaging.instance;
-    //
-    // // Request permission
-    // final settings = await messaging.requestPermission(
-    //   alert: true,
-    //   badge: true,
-    //   sound: true,
-    //   provisional: false,
-    // );
-    //
-    // final hasPermission =
-    //     settings.authorizationStatus == AuthorizationStatus.authorized ||
-    //     settings.authorizationStatus == AuthorizationStatus.provisional;
-    //
-    // if (!hasPermission) {
-    //   state = state.copyWith(isInitialized: true, hasPermission: false);
-    //   return;
-    // }
-    //
-    // // Get FCM token
-    // final token = await messaging.getToken();
-    //
-    // // Listen for token refresh
-    // messaging.onTokenRefresh.listen(_onTokenRefresh);
-    //
-    // // Handle foreground messages
-    // FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-    //
-    // // Handle background/terminated message taps
-    // FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
-    //
-    // // Check if app was opened from a notification
-    // final initialMessage = await messaging.getInitialMessage();
-    // if (initialMessage != null) {
-    //   _handleMessageTap(initialMessage);
-    // }
+    try {
+      // Ensure Firebase is initialized
+      await Firebase.initializeApp();
 
-    // Placeholder: simulate initialization
-    state = state.copyWith(
-      isInitialized: true,
-      hasPermission: true,
-      fcmToken: null, // Will be set when FCM is configured
-    );
+      final messaging = FirebaseMessaging.instance;
+
+      // Request permission (especially important for iOS)
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      final hasPermission =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      if (!hasPermission) {
+        state = state.copyWith(isInitialized: true, hasPermission: false);
+        return;
+      }
+
+      // Get FCM token
+      final token = await messaging.getToken();
+
+      // Listen for token refresh
+      messaging.onTokenRefresh.listen(_onTokenRefresh);
+
+      // Handle foreground messages
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+      // Handle background/terminated message taps
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
+
+      // Check if app was opened from a terminated state via notification
+      final initialMessage = await messaging.getInitialMessage();
+      if (initialMessage != null) {
+        _handleMessageTap(initialMessage);
+      }
+
+      state = state.copyWith(
+        isInitialized: true,
+        hasPermission: true,
+        fcmToken: token,
+      );
+
+      // Register token with the backend if we have one
+      if (token != null) {
+        final platform = _detectPlatform();
+        await registerToken(token, platform);
+      }
+    } catch (e) {
+      // Firebase may not be configured yet (missing google-services.json or
+      // GoogleService-Info.plist). Fall back to a non-FCM state so the app
+      // still works.
+      debugPrint('Firebase initialization failed: $e');
+      state = state.copyWith(
+        isInitialized: true,
+        hasPermission: false,
+        fcmToken: null,
+      );
+    }
+  }
+
+  /// Handle a foreground RemoteMessage from FCM
+  void _handleForegroundMessage(RemoteMessage message) {
+    final data = <String, dynamic>{
+      'title': message.notification?.title ?? '',
+      'body': message.notification?.body ?? '',
+      ...message.data,
+    };
+    handleForegroundNotification(data);
+  }
+
+  /// Handle a notification tap (from background or terminated state)
+  void _handleMessageTap(RemoteMessage message) {
+    final data = <String, dynamic>{
+      'title': message.notification?.title ?? '',
+      'body': message.notification?.body ?? '',
+      ...message.data,
+    };
+    handleNotificationTap(data);
   }
 
   /// Request notification permission from the user
   Future<bool> requestPermission() async {
-    // --- Placeholder ---
-    // In production, use FirebaseMessaging.instance.requestPermission()
-    state = state.copyWith(hasPermission: true);
-    return true;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+
+      final granted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      state = state.copyWith(hasPermission: granted);
+      return granted;
+    } catch (e) {
+      debugPrint('Failed to request notification permission: $e');
+      state = state.copyWith(hasPermission: false);
+      return false;
+    }
   }
 
   /// Register the device token with the backend
@@ -218,8 +274,13 @@ class NotificationService extends StateNotifier<NotificationState> {
   }
 
   String _detectPlatform() {
-    // In production, use Platform.isAndroid / Platform.isIOS
-    return 'android'; // Placeholder
+    try {
+      if (Platform.isAndroid) return 'android';
+      if (Platform.isIOS) return 'ios';
+    } catch (_) {
+      // Platform may not be available in tests
+    }
+    return 'android';
   }
 
   @override

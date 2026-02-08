@@ -47,6 +47,13 @@ mobile/build/
 mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 
+# Firebase config files (contain API keys - use .example files as templates)
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
+
+# Android signing
+mobile/android/key.properties
+
 # Misc
 *.tsbuildinfo
 .turbo

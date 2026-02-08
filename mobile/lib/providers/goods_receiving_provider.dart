@@ -49,7 +49,7 @@ class GoodsReceivingNotifier extends StateNotifier<GoodsReceivingState> {
 
   GoodsReceivingNotifier() : super(GoodsReceivingState());
 
-  Future<void> loadOrdersToReceive() async {
+  Future<void> loadOrdersToReceive({String? warehouseId}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -57,6 +57,7 @@ class GoodsReceivingNotifier extends StateNotifier<GoodsReceivingState> {
       final issuedResponse = await _apiClient.dio.get('/purchase-orders', queryParameters: {
         'status': 'ISSUED',
         'limit': 100,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final issuedOrders = (issuedResponse.data['data'] as List)
@@ -67,6 +68,7 @@ class GoodsReceivingNotifier extends StateNotifier<GoodsReceivingState> {
       final partialResponse = await _apiClient.dio.get('/purchase-orders', queryParameters: {
         'status': 'PARTIALLY_RECEIVED',
         'limit': 100,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final partialOrders = (partialResponse.data['data'] as List)
@@ -85,10 +87,11 @@ class GoodsReceivingNotifier extends StateNotifier<GoodsReceivingState> {
     }
   }
 
-  Future<void> loadRecentGRNs() async {
+  Future<void> loadRecentGRNs({String? warehouseId}) async {
     try {
       final response = await _apiClient.dio.get('/purchase-orders/grn', queryParameters: {
         'limit': 20,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final grns = (response.data['data'] as List)

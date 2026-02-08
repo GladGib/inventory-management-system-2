@@ -24,7 +24,8 @@
     "migration:run": "npx prisma migrate deploy",
     "migration:revert": "npx prisma migrate reset --skip-seed --force",
     "migration:status": "npx prisma migrate status",
-    "openapi:generate": "ts-node scripts/generate-openapi.ts"
+    "openapi:generate": "ts-node -r tsconfig-paths/register scripts/generate-openapi.ts",
+    "openapi:sdk": "npx @openapitools/openapi-generator-cli generate -i openapi.json -g typescript-axios -o ../sdk --skip-validate-spec"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

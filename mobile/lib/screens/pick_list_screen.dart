@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/pick_list.dart';
 import '../models/sales_order.dart';
 import '../providers/pick_list_provider.dart';
+import '../providers/warehouse_provider.dart';
 import '../core/theme.dart';
 
 class PickListScreen extends ConsumerStatefulWidget {
@@ -17,7 +18,8 @@ class _PickListScreenState extends ConsumerState<PickListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(pickListProvider.notifier).loadOrdersReadyForPicking();
+      final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+      ref.read(pickListProvider.notifier).loadOrdersReadyForPicking(warehouseId: warehouseId);
     });
   }
 
@@ -25,6 +27,7 @@ class _PickListScreenState extends ConsumerState<PickListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(pickListProvider);
     final orders = ref.watch(ordersReadyForPickingProvider);
+    final selectedWarehouse = ref.watch(selectedWarehouseProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -32,7 +35,9 @@ class _PickListScreenState extends ConsumerState<PickListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(pickListProvider.notifier).refresh(),
+            onPressed: () => ref.read(pickListProvider.notifier).loadOrdersReadyForPicking(
+                  warehouseId: selectedWarehouse?.id,
+                ),
           ),
         ],
       ),
@@ -76,7 +81,8 @@ class _PickListScreenState extends ConsumerState<PickListScreen> {
   Widget _buildOrdersList(List<SalesOrder> orders) {
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(pickListProvider.notifier).loadOrdersReadyForPicking();
+        final warehouseId = ref.read(selectedWarehouseProvider)?.id;
+        await ref.read(pickListProvider.notifier).loadOrdersReadyForPicking(warehouseId: warehouseId);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),

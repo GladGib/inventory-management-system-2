@@ -39,7 +39,7 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
 
   ItemsNotifier() : super(ItemsState());
 
-  Future<void> loadItems({String? search, int page = 1}) async {
+  Future<void> loadItems({String? search, int page = 1, String? warehouseId}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -47,6 +47,7 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
         'page': page,
         'limit': 20,
         if (search != null && search.isNotEmpty) 'search': search,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final data = response.data;
@@ -68,10 +69,11 @@ class ItemsNotifier extends StateNotifier<ItemsState> {
     }
   }
 
-  Future<Item?> getItemByBarcode(String barcode) async {
+  Future<Item?> getItemByBarcode(String barcode, {String? warehouseId}) async {
     try {
       final response = await _apiClient.dio.get('/items', queryParameters: {
         'barcode': barcode,
+        if (warehouseId != null) 'warehouseId': warehouseId,
       });
 
       final data = response.data['data'] as List;

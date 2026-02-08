@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  This is an example file. To get the real GoogleService-Info.plist:
+  1) Go to https://console.firebase.google.com/
+  2) Select or create your project
+  3) Add an iOS app with bundle ID 'com.example.inventoryApp'
+  4) Download GoogleService-Info.plist
+  5) Copy it to mobile/ios/Runner/GoogleService-Info.plist (same directory as this file)
+  6) NEVER commit the real GoogleService-Info.plist to version control.
+
+  Additionally, enable Push Notifications in Xcode:
+  1) Open ios/Runner.xcworkspace in Xcode
+  2) Select the Runner target -> Signing & Capabilities
+  3) Click '+ Capability' and add 'Push Notifications'
+  4) Also add 'Background Modes' and check 'Remote notifications'
+-->
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>YOUR_CLIENT_ID.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.YOUR_CLIENT_ID</string>
+	<key>API_KEY</key>
+	<string>YOUR_API_KEY</string>
+	<key>GCM_SENDER_ID</key>
+	<string>YOUR_PROJECT_NUMBER</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.inventoryApp</string>
+	<key>PROJECT_ID</key>
+	<string>your-project-id</string>
+	<key>STORAGE_BUCKET</key>
+	<string>your-project-id.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:YOUR_PROJECT_NUMBER:ios:YOUR_APP_HASH</string>
+</dict>
+</plist>

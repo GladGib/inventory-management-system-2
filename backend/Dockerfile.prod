@@ -3,10 +3,19 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 
+# Copy package manifests. In a workspace monorepo the lock file may live at the
+# project root. Build with one of:
+#   docker build -f backend/Dockerfile.prod -t ims-backend ./backend
+#   docker build -f backend/Dockerfile.prod -t ims-backend .   (when lock file is at root)
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 COPY prisma ./prisma/
 
-RUN npm ci --only=production && \
+# Use npm ci when a lock file is present, fall back to npm install otherwise
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev; \
+    else \
+      npm install --omit=dev; \
+    fi && \
     npx prisma generate
 
 # ---- Stage 2: Build ----
@@ -17,7 +26,11 @@ WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 COPY prisma ./prisma/
 
-RUN npm ci && \
+RUN if [ -f package-lock.json ]; then \
+      npm ci; \
+    else \
+      npm install; \
+    fi && \
     npx prisma generate
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
