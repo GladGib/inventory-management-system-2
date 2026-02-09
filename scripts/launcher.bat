@@ -18,6 +18,9 @@ echo.
 echo     [1] Start Web Application
 echo         (PostgreSQL + Backend + Next.js Web)
 echo.
+echo     [L] Start Web Application (LAN Mode)
+echo         (Same as [1] but accessible from other WiFi devices)
+echo.
 echo     [2] Start Mobile Application
 echo         (PostgreSQL + Backend + Flutter Mobile)
 echo.
@@ -46,6 +49,7 @@ echo.
 set /p choice="  Enter your choice (0-9): "
 
 if "%choice%"=="1" goto start_web
+if /i "%choice%"=="L" goto start_web_lan
 if "%choice%"=="2" goto start_mobile
 if "%choice%"=="3" goto start_backend
 if "%choice%"=="4" goto stop_all
@@ -59,6 +63,10 @@ goto menu
 
 :start_web
 call "%~dp0start-web.bat"
+goto menu
+
+:start_web_lan
+call "%~dp0start-web-lan.bat"
 goto menu
 
 :start_mobile
