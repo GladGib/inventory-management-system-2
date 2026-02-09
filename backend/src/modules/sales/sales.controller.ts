@@ -36,11 +36,12 @@ import {
   UpdateShipmentDto,
   ShipmentResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 import { PdfService } from '@/common/pdf';
 
 @ApiTags('Sales Orders')
 @ApiBearerAuth()
+@AuditEntity('SalesOrder')
 @Controller('sales-orders')
 export class SalesController {
   constructor(
@@ -50,6 +51,7 @@ export class SalesController {
   ) {}
 
   @Post()
+  @RequirePermissions('sales:create')
   @ApiOperation({ summary: 'Create a new sales order' })
   @ApiResponse({ status: 201, type: SalesOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -62,6 +64,7 @@ export class SalesController {
   }
 
   @Get()
+  @RequirePermissions('sales:view')
   @ApiOperation({ summary: 'List all sales orders' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -93,6 +96,7 @@ export class SalesController {
   }
 
   @Get(':id')
+  @RequirePermissions('sales:view')
   @ApiOperation({ summary: 'Get sales order by ID' })
   @ApiResponse({ status: 200, type: SalesOrderResponseDto })
   @ApiResponse({ status: 404, description: 'Sales order not found' })
@@ -105,6 +109,7 @@ export class SalesController {
   }
 
   @Get(':id/pdf')
+  @RequirePermissions('sales:view')
   @ApiOperation({ summary: 'Download sales order as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -127,6 +132,7 @@ export class SalesController {
   }
 
   @Put(':id')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Update sales order' })
   @ApiResponse({ status: 200, type: SalesOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Can only update draft orders' })
@@ -142,6 +148,7 @@ export class SalesController {
 
   // Line management
   @Post(':id/lines')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Add line to sales order' })
   @ApiResponse({ status: 201, type: SalesOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Can only add to draft orders' })
@@ -156,6 +163,7 @@ export class SalesController {
   }
 
   @Put(':id/lines/:lineId')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Update sales order line' })
   @ApiResponse({ status: 200, type: SalesOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Can only update draft orders' })
@@ -171,6 +179,7 @@ export class SalesController {
   }
 
   @Delete(':id/lines/:lineId')
+  @RequirePermissions('sales:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove line from sales order' })
   @ApiResponse({ status: 200, type: SalesOrderResponseDto })
@@ -187,6 +196,7 @@ export class SalesController {
 
   // Status transitions
   @Post(':id/confirm')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Confirm sales order and allocate stock' })
   @ApiResponse({ status: 200, type: SalesOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Insufficient stock or not draft' })
@@ -201,6 +211,7 @@ export class SalesController {
   }
 
   @Post(':id/cancel')
+  @RequirePermissions('sales:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel sales order' })
   @ApiResponse({ status: 200, type: SalesOrderResponseDto })
@@ -216,6 +227,7 @@ export class SalesController {
 
   // Pick list
   @Post(':id/pick-list')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Create pick list for order' })
   @ApiResponse({ status: 201, type: PickListResponseDto })
   @ApiResponse({ status: 400, description: 'Order not confirmed' })
@@ -231,6 +243,7 @@ export class SalesController {
 
   // Shipments
   @Post(':id/shipments')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Create shipment for sales order' })
   @ApiResponse({ status: 201, type: ShipmentResponseDto })
   @ApiResponse({ status: 400, description: 'Order not in shippable status' })
@@ -245,6 +258,7 @@ export class SalesController {
   }
 
   @Get(':id/shipments')
+  @RequirePermissions('sales:view')
   @ApiOperation({ summary: 'Get shipments for sales order' })
   @ApiResponse({ status: 200, type: [ShipmentResponseDto] })
   @ApiResponse({ status: 404, description: 'Sales order not found' })
@@ -259,6 +273,7 @@ export class SalesController {
 
 @ApiTags('Shipments')
 @ApiBearerAuth()
+@AuditEntity('Shipment')
 @Controller('shipments')
 export class ShipmentsController {
   constructor(
@@ -267,6 +282,7 @@ export class ShipmentsController {
   ) {}
 
   @Get(':id')
+  @RequirePermissions('sales:view')
   @ApiOperation({ summary: 'Get shipment by ID' })
   @ApiResponse({ status: 200, type: ShipmentResponseDto })
   @ApiResponse({ status: 404, description: 'Shipment not found' })
@@ -279,6 +295,7 @@ export class ShipmentsController {
   }
 
   @Put(':id')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Update shipment' })
   @ApiResponse({ status: 200, type: ShipmentResponseDto })
   @ApiResponse({ status: 400, description: 'Cannot update delivered shipment' })
@@ -293,6 +310,7 @@ export class ShipmentsController {
   }
 
   @Post(':id/deliver')
+  @RequirePermissions('sales:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark shipment as delivered' })
   @ApiResponse({ status: 200, type: ShipmentResponseDto })
@@ -307,6 +325,7 @@ export class ShipmentsController {
   }
 
   @Get(':id/delivery-order')
+  @RequirePermissions('sales:view')
   @ApiOperation({ summary: 'Download delivery order PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -333,9 +352,11 @@ export class ShipmentsController {
 @ApiBearerAuth()
 @Controller('pick-lists')
 export class PickListsController {
+
   constructor(private salesService: SalesService) {}
 
   @Post(':id/process')
+  @RequirePermissions('sales:edit')
   @ApiOperation({ summary: 'Process pick list' })
   @ApiResponse({ status: 200, type: PickListResponseDto })
   @ApiResponse({ status: 400, description: 'Pick list already processed' })

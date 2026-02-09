@@ -25,15 +25,17 @@ import {
   RecordCountDto,
   StockCountResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Stock Adjustments')
 @ApiBearerAuth()
+@AuditEntity('StockAdjustment')
 @Controller('stock-adjustments')
 export class StockAdjustmentsController {
   constructor(private inventoryService: InventoryService) {}
 
   @Post()
+  @RequirePermissions('inventory:create')
   @ApiOperation({ summary: 'Create stock adjustment' })
   @ApiResponse({ status: 201, type: StockAdjustmentResponseDto })
   async create(
@@ -45,6 +47,7 @@ export class StockAdjustmentsController {
   }
 
   @Get()
+  @RequirePermissions('inventory:view')
   @ApiOperation({ summary: 'List stock adjustments' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -67,6 +70,7 @@ export class StockAdjustmentsController {
   }
 
   @Post(':id/confirm')
+  @RequirePermissions('inventory:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm stock adjustment' })
   @ApiResponse({ status: 200, type: StockAdjustmentResponseDto })
@@ -82,11 +86,13 @@ export class StockAdjustmentsController {
 
 @ApiTags('Stock Transfers')
 @ApiBearerAuth()
+@AuditEntity('StockTransfer')
 @Controller('stock-transfers')
 export class StockTransfersController {
   constructor(private inventoryService: InventoryService) {}
 
   @Post()
+  @RequirePermissions('inventory:create')
   @ApiOperation({ summary: 'Create stock transfer' })
   @ApiResponse({ status: 201, type: StockTransferResponseDto })
   async create(
@@ -98,6 +104,7 @@ export class StockTransfersController {
   }
 
   @Post(':id/confirm')
+  @RequirePermissions('inventory:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm stock transfer' })
   @ApiResponse({ status: 200, type: StockTransferResponseDto })
@@ -113,11 +120,13 @@ export class StockTransfersController {
 
 @ApiTags('Stock Counts')
 @ApiBearerAuth()
+@AuditEntity('StockCount')
 @Controller('stock-counts')
 export class StockCountsController {
   constructor(private inventoryService: InventoryService) {}
 
   @Post()
+  @RequirePermissions('inventory:create')
   @ApiOperation({ summary: 'Create stock count' })
   @ApiResponse({ status: 201, type: StockCountResponseDto })
   async create(
@@ -129,6 +138,7 @@ export class StockCountsController {
   }
 
   @Get()
+  @RequirePermissions('inventory:view')
   @ApiOperation({ summary: 'List stock counts' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -151,6 +161,7 @@ export class StockCountsController {
   }
 
   @Get(':id')
+  @RequirePermissions('inventory:view')
   @ApiOperation({ summary: 'Get stock count by ID' })
   @ApiResponse({ status: 200, type: StockCountResponseDto })
   @ApiResponse({ status: 404, description: 'Stock count not found' })
@@ -163,6 +174,7 @@ export class StockCountsController {
   }
 
   @Post(':id/record')
+  @RequirePermissions('inventory:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Record count entries' })
   @ApiResponse({ status: 200, type: StockCountResponseDto })
@@ -176,6 +188,7 @@ export class StockCountsController {
   }
 
   @Post(':id/complete')
+  @RequirePermissions('inventory:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Complete stock count and generate adjustment' })
   @ApiQuery({ name: 'createAdjustment', required: false, type: Boolean })
@@ -198,9 +211,11 @@ export class StockCountsController {
 @ApiBearerAuth()
 @Controller('stock-movements')
 export class StockMovementsController {
+
   constructor(private inventoryService: InventoryService) {}
 
   @Get()
+  @RequirePermissions('inventory:view')
   @ApiOperation({ summary: 'Get stock movement history' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })

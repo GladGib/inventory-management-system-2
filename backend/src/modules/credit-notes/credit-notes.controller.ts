@@ -19,7 +19,7 @@ import {
   ApiProduces,
 } from '@nestjs/swagger';
 import { Response } from 'express';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 import { PdfService } from '@/common/pdf';
 import { CreditNotesService } from './credit-notes.service';
 import {
@@ -33,6 +33,7 @@ import {
 
 @ApiTags('Credit Notes')
 @ApiBearerAuth()
+@AuditEntity('CreditNote')
 @Controller('credit-notes')
 export class CreditNotesController {
   constructor(
@@ -41,6 +42,7 @@ export class CreditNotesController {
   ) {}
 
   @Post()
+  @RequirePermissions('credit-notes:create')
   @ApiOperation({ summary: 'Create a credit note' })
   @ApiResponse({ status: 201, type: CreditNoteResponseDto })
   async create(
@@ -52,6 +54,7 @@ export class CreditNotesController {
   }
 
   @Post('from-return/:returnId')
+  @RequirePermissions('credit-notes:create')
   @ApiOperation({ summary: 'Create credit note from sales return' })
   @ApiResponse({ status: 201, type: CreditNoteResponseDto })
   async createFromReturn(
@@ -66,6 +69,7 @@ export class CreditNotesController {
   }
 
   @Get()
+  @RequirePermissions('credit-notes:view')
   @ApiOperation({ summary: 'Get all credit notes' })
   @ApiResponse({ status: 200, description: 'List of credit notes' })
   async findAll(
@@ -76,6 +80,7 @@ export class CreditNotesController {
   }
 
   @Get(':id')
+  @RequirePermissions('credit-notes:view')
   @ApiOperation({ summary: 'Get credit note by ID' })
   @ApiResponse({ status: 200, type: CreditNoteResponseDto })
   @ApiResponse({ status: 404, description: 'Credit note not found' })
@@ -88,6 +93,7 @@ export class CreditNotesController {
   }
 
   @Get(':id/pdf')
+  @RequirePermissions('credit-notes:view')
   @ApiOperation({ summary: 'Download credit note as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -113,6 +119,7 @@ export class CreditNotesController {
   }
 
   @Put(':id')
+  @RequirePermissions('credit-notes:edit')
   @ApiOperation({ summary: 'Update credit note' })
   @ApiResponse({ status: 200, type: CreditNoteResponseDto })
   @ApiResponse({ status: 400, description: 'Can only update draft credit notes' })
@@ -127,6 +134,7 @@ export class CreditNotesController {
   }
 
   @Post(':id/issue')
+  @RequirePermissions('credit-notes:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Issue credit note' })
   @ApiResponse({ status: 200, type: CreditNoteResponseDto })
@@ -141,6 +149,7 @@ export class CreditNotesController {
   }
 
   @Post(':id/void')
+  @RequirePermissions('credit-notes:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Void credit note' })
   @ApiResponse({ status: 200, type: CreditNoteResponseDto })
@@ -155,6 +164,7 @@ export class CreditNotesController {
   }
 
   @Post(':id/apply')
+  @RequirePermissions('credit-notes:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Apply credit note to invoice' })
   @ApiResponse({ status: 200, type: CreditNoteResponseDto })
@@ -174,6 +184,7 @@ export class CreditNotesController {
   }
 
   @Post(':id/refund')
+  @RequirePermissions('credit-notes:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Record refund for credit note' })
   @ApiResponse({ status: 200, type: CreditNoteResponseDto })
@@ -193,6 +204,7 @@ export class CreditNotesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('credit-notes:delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete credit note' })
   @ApiResponse({ status: 204, description: 'Credit note deleted' })

@@ -29,6 +29,7 @@ Interactive menu to manage all services. Double-click to run.
    [6] Open pgAdmin (Database UI)
    [7] Run Database Migrations
    [8] Seed Database (Sample Data)
+   [9] Install Dependencies (First Time)
    [0] Exit
 ```
 
@@ -153,6 +154,7 @@ https://docs.flutter.dev/get-started/install
 1. **First time setup:**
    ```cmd
    launcher.bat
+   # Select [9] Install Dependencies (First Time)
    # Select [7] Run Database Migrations
    # Select [8] Seed Database
    ```

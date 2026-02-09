@@ -27,12 +27,13 @@ import {
   RecordPaymentDto,
   PaymentResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 import { PdfService } from '@/common/pdf';
 import { EmailService } from '@/common/email';
 
 @ApiTags('Invoices')
 @ApiBearerAuth()
+@AuditEntity('Invoice')
 @Controller('invoices')
 export class InvoicesController {
   constructor(
@@ -42,6 +43,7 @@ export class InvoicesController {
   ) {}
 
   @Post('from-order')
+  @RequirePermissions('invoices:create')
   @ApiOperation({ summary: 'Create invoice from sales order' })
   @ApiResponse({ status: 201, type: InvoiceResponseDto })
   @ApiResponse({ status: 400, description: 'Order not confirmed' })
@@ -55,6 +57,7 @@ export class InvoicesController {
   }
 
   @Post()
+  @RequirePermissions('invoices:create')
   @ApiOperation({ summary: 'Create direct invoice' })
   @ApiResponse({ status: 201, type: InvoiceResponseDto })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -67,6 +70,7 @@ export class InvoicesController {
   }
 
   @Get()
+  @RequirePermissions('invoices:view')
   @ApiOperation({ summary: 'List all invoices' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -101,6 +105,7 @@ export class InvoicesController {
   }
 
   @Get(':id')
+  @RequirePermissions('invoices:view')
   @ApiOperation({ summary: 'Get invoice by ID' })
   @ApiResponse({ status: 200, type: InvoiceResponseDto })
   @ApiResponse({ status: 404, description: 'Invoice not found' })
@@ -113,6 +118,7 @@ export class InvoicesController {
   }
 
   @Get(':id/pdf')
+  @RequirePermissions('invoices:view')
   @ApiOperation({ summary: 'Download invoice as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -135,6 +141,7 @@ export class InvoicesController {
   }
 
   @Post(':id/send')
+  @RequirePermissions('invoices:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark invoice as sent' })
   @ApiResponse({ status: 200, type: InvoiceResponseDto })
@@ -149,6 +156,7 @@ export class InvoicesController {
   }
 
   @Post(':id/void')
+  @RequirePermissions('invoices:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Void invoice' })
   @ApiResponse({ status: 200, type: InvoiceResponseDto })
@@ -163,6 +171,7 @@ export class InvoicesController {
   }
 
   @Post(':id/payments')
+  @RequirePermissions('invoices:edit')
   @ApiOperation({ summary: 'Record payment for invoice' })
   @ApiResponse({ status: 201, type: PaymentResponseDto })
   @ApiResponse({ status: 400, description: 'Amount exceeds balance' })
@@ -177,6 +186,7 @@ export class InvoicesController {
   }
 
   @Post(':id/send-email')
+  @RequirePermissions('invoices:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Send invoice via email to customer' })
   @ApiResponse({
@@ -219,6 +229,7 @@ export class PaymentsReceivedController {
   constructor(private invoicesService: InvoicesService) {}
 
   @Get()
+  @RequirePermissions('invoices:view')
   @ApiOperation({ summary: 'List all payments received' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })

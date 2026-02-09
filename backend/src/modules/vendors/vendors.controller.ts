@@ -31,15 +31,17 @@ import {
   VendorItemPricingDto,
   VendorItemResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Vendors')
 @ApiBearerAuth()
+@AuditEntity('Vendor')
 @Controller('vendors')
 export class VendorsController {
   constructor(private vendorsService: VendorsService) {}
 
   @Post()
+  @RequirePermissions('vendors:create')
   @ApiOperation({ summary: 'Create a new vendor' })
   @ApiResponse({ status: 201, type: VendorResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -52,6 +54,7 @@ export class VendorsController {
   }
 
   @Get()
+  @RequirePermissions('vendors:view')
   @ApiOperation({ summary: 'List all vendors' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -74,6 +77,7 @@ export class VendorsController {
   }
 
   @Get('code/:code')
+  @RequirePermissions('vendors:view')
   @ApiOperation({ summary: 'Get vendor by code' })
   @ApiResponse({ status: 200, type: VendorResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
@@ -86,6 +90,7 @@ export class VendorsController {
   }
 
   @Get(':id')
+  @RequirePermissions('vendors:view')
   @ApiOperation({ summary: 'Get vendor by ID' })
   @ApiResponse({ status: 200, type: VendorResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
@@ -98,6 +103,7 @@ export class VendorsController {
   }
 
   @Get(':id/items')
+  @RequirePermissions('vendors:view')
   @ApiOperation({ summary: 'Get vendor linked items' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -113,6 +119,7 @@ export class VendorsController {
   }
 
   @Get(':id/transactions')
+  @RequirePermissions('vendors:view')
   @ApiOperation({ summary: 'Get vendor transaction history' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -134,6 +141,7 @@ export class VendorsController {
   }
 
   @Put(':id')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Update vendor' })
   @ApiResponse({ status: 200, type: VendorResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
@@ -147,6 +155,7 @@ export class VendorsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('vendors:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete vendor' })
   @ApiResponse({ status: 200, description: 'Vendor deleted' })
@@ -161,6 +170,7 @@ export class VendorsController {
 
   // Address endpoints
   @Post(':id/addresses')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Add vendor address' })
   @ApiResponse({ status: 201, type: VendorAddressResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
@@ -174,6 +184,7 @@ export class VendorsController {
   }
 
   @Put(':id/addresses/:addressId')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Update vendor address' })
   @ApiResponse({ status: 200, type: VendorAddressResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor or address not found' })
@@ -193,6 +204,7 @@ export class VendorsController {
   }
 
   @Delete(':id/addresses/:addressId')
+  @RequirePermissions('vendors:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete vendor address' })
   @ApiResponse({ status: 200, description: 'Address deleted' })
@@ -208,6 +220,7 @@ export class VendorsController {
 
   // Contact endpoints
   @Post(':id/contacts')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Add vendor contact' })
   @ApiResponse({ status: 201, type: VendorContactResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
@@ -221,6 +234,7 @@ export class VendorsController {
   }
 
   @Put(':id/contacts/:contactId')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Update vendor contact' })
   @ApiResponse({ status: 200, type: VendorContactResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor or contact not found' })
@@ -240,6 +254,7 @@ export class VendorsController {
   }
 
   @Delete(':id/contacts/:contactId')
+  @RequirePermissions('vendors:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete vendor contact' })
   @ApiResponse({ status: 200, description: 'Contact deleted' })
@@ -255,6 +270,7 @@ export class VendorsController {
 
   // Item linking endpoints
   @Post(':id/items')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Link item to vendor with pricing' })
   @ApiResponse({ status: 201, type: VendorItemResponseDto })
   @ApiResponse({ status: 400, description: 'Item already linked' })
@@ -269,6 +285,7 @@ export class VendorsController {
   }
 
   @Put(':id/items/:itemId')
+  @RequirePermissions('vendors:edit')
   @ApiOperation({ summary: 'Update vendor-item link pricing' })
   @ApiResponse({ status: 200, type: VendorItemResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor or item link not found' })
@@ -288,6 +305,7 @@ export class VendorsController {
   }
 
   @Delete(':id/items/:itemId')
+  @RequirePermissions('vendors:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Unlink item from vendor' })
   @ApiResponse({ status: 200, description: 'Item unlinked' })

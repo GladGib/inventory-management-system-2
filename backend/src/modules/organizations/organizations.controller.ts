@@ -25,15 +25,17 @@ import {
   UpdateNumberSequenceDto,
   NumberSequenceResponseDto,
 } from './dto';
-import { CurrentUser, Roles } from '@/common/decorators';
+import { CurrentUser, Roles, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
+@AuditEntity('Organization')
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private organizationsService: OrganizationsService) {}
 
   @Get('current')
+  @RequirePermissions('organizations:view')
   @ApiOperation({ summary: 'Get current organization profile' })
   @ApiResponse({ status: 200, type: OrganizationResponseDto })
   async getCurrent(@CurrentUser('organizationId') orgId: string) {
@@ -43,6 +45,7 @@ export class OrganizationsController {
 
   @Put('current')
   @Roles('Administrator')
+  @RequirePermissions('organizations:edit')
   @ApiOperation({ summary: 'Update current organization profile' })
   @ApiResponse({ status: 200, type: OrganizationResponseDto })
   @ApiResponse({ status: 403, description: 'Forbidden' })
@@ -57,12 +60,14 @@ export class OrganizationsController {
 
 @ApiTags('Settings')
 @ApiBearerAuth()
+@AuditEntity('Settings')
 @Controller('settings')
 export class SettingsController {
   constructor(private organizationsService: OrganizationsService) {}
 
   // Tax Rates
   @Get('tax-rates')
+  @RequirePermissions('organizations:view')
   @ApiOperation({ summary: 'Get all tax rates' })
   @ApiResponse({ status: 200, type: [TaxRateResponseDto] })
   async getTaxRates(@CurrentUser('organizationId') orgId: string) {
@@ -72,6 +77,7 @@ export class SettingsController {
 
   @Post('tax-rates')
   @Roles('Administrator')
+  @RequirePermissions('organizations:edit')
   @ApiOperation({ summary: 'Create a new tax rate' })
   @ApiResponse({ status: 201, type: TaxRateResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -85,6 +91,7 @@ export class SettingsController {
 
   @Put('tax-rates/:id')
   @Roles('Administrator')
+  @RequirePermissions('organizations:edit')
   @ApiOperation({ summary: 'Update a tax rate' })
   @ApiResponse({ status: 200, type: TaxRateResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })
@@ -99,6 +106,7 @@ export class SettingsController {
 
   @Delete('tax-rates/:id')
   @Roles('Administrator')
+  @RequirePermissions('organizations:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a tax rate' })
   @ApiResponse({ status: 200, description: 'Tax rate deleted' })
@@ -114,6 +122,7 @@ export class SettingsController {
 
   // Number Sequences
   @Get('number-sequences')
+  @RequirePermissions('organizations:view')
   @ApiOperation({ summary: 'Get all number sequences' })
   @ApiResponse({ status: 200, type: [NumberSequenceResponseDto] })
   async getNumberSequences(@CurrentUser('organizationId') orgId: string) {
@@ -123,6 +132,7 @@ export class SettingsController {
 
   @Put('number-sequences/:documentType')
   @Roles('Administrator')
+  @RequirePermissions('organizations:edit')
   @ApiOperation({ summary: 'Update a number sequence' })
   @ApiResponse({ status: 200, type: NumberSequenceResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })

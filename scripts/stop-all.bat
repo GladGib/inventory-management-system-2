@@ -76,7 +76,7 @@ if errorlevel 1 (
     if %errorlevel%==0 (
         echo   Stopping PostgreSQL container...
         cd /d "%PROJECT_ROOT%"
-        docker-compose down >nul 2>&1
+        docker compose down >nul 2>&1
         set "ANYTHING_STOPPED=1"
         echo   Docker containers stopped.
     ) else (

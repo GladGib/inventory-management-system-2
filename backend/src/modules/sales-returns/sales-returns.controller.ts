@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 import { SalesReturnsService } from './sales-returns.service';
 import {
   CreateSalesReturnDto,
@@ -24,11 +24,13 @@ import {
 @ApiTags('Sales Returns')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@AuditEntity('SalesReturn')
 @Controller('sales-returns')
 export class SalesReturnsController {
   constructor(private readonly salesReturnsService: SalesReturnsService) {}
 
   @Post()
+  @RequirePermissions('sales-returns:create')
   @ApiOperation({ summary: 'Create a sales return' })
   @ApiResponse({ status: 201, description: 'Sales return created' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -41,6 +43,7 @@ export class SalesReturnsController {
   }
 
   @Get()
+  @RequirePermissions('sales-returns:view')
   @ApiOperation({ summary: 'Get all sales returns' })
   @ApiResponse({ status: 200, description: 'Sales returns list' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -52,6 +55,7 @@ export class SalesReturnsController {
   }
 
   @Get(':id')
+  @RequirePermissions('sales-returns:view')
   @ApiOperation({ summary: 'Get a sales return by ID' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiResponse({ status: 200, description: 'Sales return found' })
@@ -65,6 +69,7 @@ export class SalesReturnsController {
   }
 
   @Put(':id')
+  @RequirePermissions('sales-returns:edit')
   @ApiOperation({ summary: 'Update a sales return' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiResponse({ status: 200, description: 'Sales return updated' })
@@ -80,6 +85,7 @@ export class SalesReturnsController {
   }
 
   @Post(':id/approve')
+  @RequirePermissions('sales-returns:edit')
   @ApiOperation({ summary: 'Approve a sales return' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiResponse({ status: 200, description: 'Sales return approved' })
@@ -94,6 +100,7 @@ export class SalesReturnsController {
   }
 
   @Post(':id/reject')
+  @RequirePermissions('sales-returns:edit')
   @ApiOperation({ summary: 'Reject a sales return' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
@@ -110,6 +117,7 @@ export class SalesReturnsController {
   }
 
   @Post(':id/receive')
+  @RequirePermissions('sales-returns:edit')
   @ApiOperation({ summary: 'Receive returned items' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiResponse({ status: 200, description: 'Return items received' })
@@ -125,6 +133,7 @@ export class SalesReturnsController {
   }
 
   @Post(':id/refund')
+  @RequirePermissions('sales-returns:edit')
   @ApiOperation({ summary: 'Process refund for a return' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiResponse({ status: 200, description: 'Refund processed' })
@@ -140,6 +149,7 @@ export class SalesReturnsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('sales-returns:edit')
   @ApiOperation({ summary: 'Delete a sales return' })
   @ApiParam({ name: 'id', description: 'Sales return ID' })
   @ApiResponse({ status: 200, description: 'Sales return deleted' })

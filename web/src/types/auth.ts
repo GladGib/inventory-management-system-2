@@ -4,6 +4,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
+  permissions?: string[];
   organizationId: string;
   organizationName: string;
 }

@@ -29,12 +29,13 @@ import {
   CreateDirectGRNDto,
   GRNResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 import { PdfService } from '@/common/pdf';
 import { EmailService } from '@/common/email';
 
 @ApiTags('Purchase Orders')
 @ApiBearerAuth()
+@AuditEntity('PurchaseOrder')
 @Controller('purchase-orders')
 export class PurchasesController {
   constructor(
@@ -44,6 +45,7 @@ export class PurchasesController {
   ) {}
 
   @Post()
+  @RequirePermissions('purchases:create')
   @ApiOperation({ summary: 'Create a new purchase order' })
   @ApiResponse({ status: 201, type: PurchaseOrderResponseDto })
   @ApiResponse({ status: 404, description: 'Vendor not found' })
@@ -56,6 +58,7 @@ export class PurchasesController {
   }
 
   @Get()
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'List all purchase orders' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -87,6 +90,7 @@ export class PurchasesController {
   }
 
   @Get('reorder-suggestions')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Get reorder suggestions for low stock items' })
   @ApiResponse({ status: 200, description: 'Reorder suggestions list' })
   async getReorderSuggestions(@CurrentUser('organizationId') orgId: string) {
@@ -95,6 +99,7 @@ export class PurchasesController {
   }
 
   @Get('grn')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'List all goods received notes' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -126,6 +131,7 @@ export class PurchasesController {
   }
 
   @Get('grn/:id')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Get goods received note by ID' })
   @ApiResponse({ status: 200, type: GRNResponseDto })
   @ApiResponse({ status: 404, description: 'GRN not found' })
@@ -138,6 +144,7 @@ export class PurchasesController {
   }
 
   @Get(':id')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Get purchase order by ID' })
   @ApiResponse({ status: 200, type: PurchaseOrderResponseDto })
   @ApiResponse({ status: 404, description: 'Purchase order not found' })
@@ -150,6 +157,7 @@ export class PurchasesController {
   }
 
   @Get(':id/pdf')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Download purchase order as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -172,6 +180,7 @@ export class PurchasesController {
   }
 
   @Get('grn/:id/pdf')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Download goods received note as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -194,6 +203,7 @@ export class PurchasesController {
   }
 
   @Put(':id')
+  @RequirePermissions('purchases:edit')
   @ApiOperation({ summary: 'Update purchase order' })
   @ApiResponse({ status: 200, type: PurchaseOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Can only update draft orders' })
@@ -208,6 +218,7 @@ export class PurchasesController {
   }
 
   @Post(':id/lines')
+  @RequirePermissions('purchases:edit')
   @ApiOperation({ summary: 'Add line to purchase order' })
   @ApiResponse({ status: 201, type: PurchaseOrderResponseDto })
   @ApiResponse({ status: 400, description: 'Can only add to draft orders' })
@@ -222,6 +233,7 @@ export class PurchasesController {
   }
 
   @Post(':id/send')
+  @RequirePermissions('purchases:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Send purchase order to vendor' })
   @ApiResponse({ status: 200, type: PurchaseOrderResponseDto })
@@ -236,6 +248,7 @@ export class PurchasesController {
   }
 
   @Post(':id/cancel')
+  @RequirePermissions('purchases:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel purchase order' })
   @ApiResponse({ status: 200, type: PurchaseOrderResponseDto })
@@ -250,6 +263,7 @@ export class PurchasesController {
   }
 
   @Post(':id/receive')
+  @RequirePermissions('purchases:create')
   @ApiOperation({ summary: 'Create goods received note (GRN)' })
   @ApiResponse({ status: 201, type: GRNResponseDto })
   @ApiResponse({ status: 400, description: 'Order must be sent to receive' })
@@ -264,6 +278,7 @@ export class PurchasesController {
   }
 
   @Post(':id/send-email')
+  @RequirePermissions('purchases:edit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Send purchase order via email to vendor' })
   @ApiResponse({
@@ -301,6 +316,7 @@ export class PurchasesController {
 
 @ApiTags('Goods Received Notes')
 @ApiBearerAuth()
+@AuditEntity('GoodsReceivedNote')
 @Controller('grns')
 export class GRNsController {
   constructor(
@@ -309,6 +325,7 @@ export class GRNsController {
   ) {}
 
   @Post()
+  @RequirePermissions('purchases:create')
   @ApiOperation({ summary: 'Create direct GRN (without PO)' })
   @ApiResponse({ status: 201, type: GRNResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid data' })
@@ -322,6 +339,7 @@ export class GRNsController {
   }
 
   @Get()
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'List all goods received notes' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -352,6 +370,7 @@ export class GRNsController {
   }
 
   @Get(':id')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Get GRN by ID' })
   @ApiResponse({ status: 200, type: GRNResponseDto })
   @ApiResponse({ status: 404, description: 'GRN not found' })
@@ -364,6 +383,7 @@ export class GRNsController {
   }
 
   @Get(':id/pdf')
+  @RequirePermissions('purchases:view')
   @ApiOperation({ summary: 'Download GRN as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })

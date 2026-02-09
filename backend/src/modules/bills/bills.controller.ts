@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 import { BillsService } from './bills.service';
 import {
   CreateBillDto,
@@ -26,11 +26,13 @@ import {
 @ApiTags('Bills')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@AuditEntity('Bill')
 @Controller('bills')
 export class BillsController {
   constructor(private readonly billsService: BillsService) {}
 
   @Post()
+  @RequirePermissions('bills:create')
   @ApiOperation({ summary: 'Create a bill' })
   @ApiResponse({ status: 201, description: 'Bill created' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -43,6 +45,7 @@ export class BillsController {
   }
 
   @Post('from-grn')
+  @RequirePermissions('bills:create')
   @ApiOperation({ summary: 'Create bill from goods received note' })
   @ApiResponse({ status: 201, description: 'Bill created from GRN' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -56,6 +59,7 @@ export class BillsController {
   }
 
   @Get()
+  @RequirePermissions('bills:view')
   @ApiOperation({ summary: 'Get all bills' })
   @ApiResponse({ status: 200, description: 'Bills list' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -67,6 +71,7 @@ export class BillsController {
   }
 
   @Get('payment-summary')
+  @RequirePermissions('bills:view')
   @ApiOperation({ summary: 'Get payment summary' })
   @ApiQuery({ name: 'vendorId', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Payment summary' })
@@ -79,6 +84,7 @@ export class BillsController {
   }
 
   @Get(':id')
+  @RequirePermissions('bills:view')
   @ApiOperation({ summary: 'Get a bill by ID' })
   @ApiParam({ name: 'id', description: 'Bill ID' })
   @ApiResponse({ status: 200, description: 'Bill found' })
@@ -92,6 +98,7 @@ export class BillsController {
   }
 
   @Put(':id')
+  @RequirePermissions('bills:edit')
   @ApiOperation({ summary: 'Update a bill' })
   @ApiParam({ name: 'id', description: 'Bill ID' })
   @ApiResponse({ status: 200, description: 'Bill updated' })
@@ -107,6 +114,7 @@ export class BillsController {
   }
 
   @Post(':id/payments')
+  @RequirePermissions('bills:edit')
   @ApiOperation({ summary: 'Record payment for a bill' })
   @ApiParam({ name: 'id', description: 'Bill ID' })
   @ApiResponse({ status: 201, description: 'Payment recorded' })
@@ -122,6 +130,7 @@ export class BillsController {
   }
 
   @Post(':id/void')
+  @RequirePermissions('bills:edit')
   @ApiOperation({ summary: 'Void a bill' })
   @ApiParam({ name: 'id', description: 'Bill ID' })
   @ApiResponse({ status: 200, description: 'Bill voided' })
@@ -136,6 +145,7 @@ export class BillsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('bills:delete')
   @ApiOperation({ summary: 'Delete a bill' })
   @ApiParam({ name: 'id', description: 'Bill ID' })
   @ApiResponse({ status: 200, description: 'Bill deleted' })
@@ -158,6 +168,7 @@ export class PaymentsMadeController {
   constructor(private readonly billsService: BillsService) {}
 
   @Get()
+  @RequirePermissions('bills:view')
   @ApiOperation({ summary: 'Get all payments made' })
   @ApiResponse({ status: 200, description: 'Payments made list' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -177,6 +188,7 @@ export class VendorCreditNotesController {
   constructor(private readonly billsService: BillsService) {}
 
   @Post()
+  @RequirePermissions('bills:create')
   @ApiOperation({ summary: 'Create a vendor credit note' })
   @ApiResponse({ status: 201, description: 'Vendor credit note created' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -189,6 +201,7 @@ export class VendorCreditNotesController {
   }
 
   @Get()
+  @RequirePermissions('bills:view')
   @ApiOperation({ summary: 'Get all vendor credit notes' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -207,6 +220,7 @@ export class VendorCreditNotesController {
   }
 
   @Get(':id')
+  @RequirePermissions('bills:view')
   @ApiOperation({ summary: 'Get vendor credit note by ID' })
   @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
   @ApiResponse({ status: 200, description: 'Vendor credit note found' })
@@ -220,6 +234,7 @@ export class VendorCreditNotesController {
   }
 
   @Post(':id/issue')
+  @RequirePermissions('bills:edit')
   @ApiOperation({ summary: 'Issue vendor credit note' })
   @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
   @ApiResponse({ status: 200, description: 'Vendor credit note issued' })
@@ -234,6 +249,7 @@ export class VendorCreditNotesController {
   }
 
   @Post(':id/apply')
+  @RequirePermissions('bills:edit')
   @ApiOperation({ summary: 'Apply vendor credit note to bill' })
   @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
   @ApiResponse({ status: 200, description: 'Credit note applied to bill' })
@@ -249,6 +265,7 @@ export class VendorCreditNotesController {
   }
 
   @Post(':id/void')
+  @RequirePermissions('bills:edit')
   @ApiOperation({ summary: 'Void vendor credit note' })
   @ApiParam({ name: 'id', description: 'Vendor credit note ID' })
   @ApiResponse({ status: 200, description: 'Vendor credit note voided' })

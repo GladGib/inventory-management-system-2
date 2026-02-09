@@ -32,10 +32,11 @@ import {
   ItemWithVariantsResponseDto,
   VariantResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Items')
 @ApiBearerAuth()
+@AuditEntity('Item')
 @Controller('items')
 export class ItemsController {
   constructor(
@@ -44,6 +45,7 @@ export class ItemsController {
   ) {}
 
   @Post()
+  @RequirePermissions('items:create')
   @ApiOperation({ summary: 'Create a new item' })
   @ApiResponse({ status: 201, type: ItemResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -56,6 +58,7 @@ export class ItemsController {
   }
 
   @Get()
+  @RequirePermissions('items:view')
   @ApiOperation({ summary: 'List all items' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -84,6 +87,7 @@ export class ItemsController {
   }
 
   @Get('barcode/:barcode')
+  @RequirePermissions('items:view')
   @ApiOperation({ summary: 'Get item by barcode' })
   @ApiResponse({ status: 200, type: ItemResponseDto })
   @ApiResponse({ status: 404, description: 'Item not found' })
@@ -96,6 +100,7 @@ export class ItemsController {
   }
 
   @Get(':id')
+  @RequirePermissions('items:view')
   @ApiOperation({ summary: 'Get item by ID' })
   @ApiResponse({ status: 200, type: ItemResponseDto })
   @ApiResponse({ status: 404, description: 'Item not found' })
@@ -108,6 +113,7 @@ export class ItemsController {
   }
 
   @Get(':id/stock')
+  @RequirePermissions('items:view')
   @ApiOperation({ summary: 'Get item stock levels' })
   @ApiResponse({ status: 200, type: ItemStockResponseDto })
   @ApiResponse({ status: 404, description: 'Item not found' })
@@ -120,6 +126,7 @@ export class ItemsController {
   }
 
   @Put(':id')
+  @RequirePermissions('items:edit')
   @ApiOperation({ summary: 'Update item' })
   @ApiResponse({ status: 200, type: ItemResponseDto })
   @ApiResponse({ status: 404, description: 'Item not found' })
@@ -133,6 +140,7 @@ export class ItemsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('items:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete item' })
   @ApiResponse({ status: 200, description: 'Item deleted' })
@@ -147,6 +155,7 @@ export class ItemsController {
 
   // Variant Endpoints
   @Post(':id/variants')
+  @RequirePermissions('items:create')
   @ApiOperation({ summary: 'Create variants for an item' })
   @ApiResponse({ status: 201, type: ItemWithVariantsResponseDto })
   @ApiResponse({ status: 400, description: 'Item already has variants or is a variant' })
@@ -160,6 +169,7 @@ export class ItemsController {
   }
 
   @Get(':id/variants')
+  @RequirePermissions('items:view')
   @ApiOperation({ summary: 'Get item with all variants' })
   @ApiResponse({ status: 200, type: ItemWithVariantsResponseDto })
   @ApiResponse({ status: 404, description: 'Item not found' })
@@ -172,6 +182,7 @@ export class ItemsController {
   }
 
   @Put(':id/variants/:variantId')
+  @RequirePermissions('items:edit')
   @ApiOperation({ summary: 'Update a specific variant' })
   @ApiResponse({ status: 200, type: VariantResponseDto })
   @ApiResponse({ status: 404, description: 'Variant not found' })
@@ -186,6 +197,7 @@ export class ItemsController {
   }
 
   @Delete(':id/variants')
+  @RequirePermissions('items:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete all variants for an item' })
   @ApiResponse({ status: 200, description: 'Variants deleted' })
@@ -199,6 +211,7 @@ export class ItemsController {
   }
 
   @Put(':id/variants/bulk-prices')
+  @RequirePermissions('items:edit')
   @ApiOperation({ summary: 'Bulk update variant prices' })
   @ApiResponse({ status: 200, description: 'Prices updated' })
   async bulkUpdatePrices(
@@ -213,11 +226,13 @@ export class ItemsController {
 
 @ApiTags('Categories')
 @ApiBearerAuth()
+@AuditEntity('Category')
 @Controller('categories')
 export class CategoriesController {
   constructor(private itemsService: ItemsService) {}
 
   @Post()
+  @RequirePermissions('items:create')
   @ApiOperation({ summary: 'Create a new category' })
   @ApiResponse({ status: 201, type: CategoryResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -230,6 +245,7 @@ export class CategoriesController {
   }
 
   @Get()
+  @RequirePermissions('items:view')
   @ApiOperation({ summary: 'List all categories' })
   @ApiQuery({ name: 'tree', required: false, type: Boolean })
   @ApiResponse({ status: 200, description: 'Categories list' })
@@ -242,6 +258,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
+  @RequirePermissions('items:edit')
   @ApiOperation({ summary: 'Update category' })
   @ApiResponse({ status: 200, type: CategoryResponseDto })
   @ApiResponse({ status: 404, description: 'Category not found' })
@@ -255,6 +272,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('items:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete category' })
   @ApiResponse({ status: 200, description: 'Category deleted' })

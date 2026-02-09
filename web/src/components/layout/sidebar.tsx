@@ -7,6 +7,7 @@ import {
   ShopOutlined,
   TeamOutlined,
   UserOutlined,
+  UsergroupAddOutlined,
   InboxOutlined,
   AppstoreOutlined,
   BarChartOutlined,
@@ -70,6 +71,11 @@ const menuItems: MenuItem[] = [
     key: '/vendors',
     icon: <UserOutlined />,
     label: 'Vendors',
+  },
+  {
+    key: '/users',
+    icon: <UsergroupAddOutlined />,
+    label: 'Users',
   },
   {
     key: 'reports',

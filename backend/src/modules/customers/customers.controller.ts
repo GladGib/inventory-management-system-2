@@ -30,15 +30,17 @@ import {
   CustomerAddressResponseDto,
   CustomerContactResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Customers')
 @ApiBearerAuth()
+@AuditEntity('Customer')
 @Controller('customers')
 export class CustomersController {
   constructor(private customersService: CustomersService) {}
 
   @Post()
+  @RequirePermissions('customers:create')
   @ApiOperation({ summary: 'Create a new customer' })
   @ApiResponse({ status: 201, type: CustomerResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -51,6 +53,7 @@ export class CustomersController {
   }
 
   @Get()
+  @RequirePermissions('customers:view')
   @ApiOperation({ summary: 'List all customers' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -73,6 +76,7 @@ export class CustomersController {
   }
 
   @Get('code/:code')
+  @RequirePermissions('customers:view')
   @ApiOperation({ summary: 'Get customer by code' })
   @ApiResponse({ status: 200, type: CustomerResponseDto })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -85,6 +89,7 @@ export class CustomersController {
   }
 
   @Get(':id')
+  @RequirePermissions('customers:view')
   @ApiOperation({ summary: 'Get customer by ID' })
   @ApiResponse({ status: 200, type: CustomerResponseDto })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -97,6 +102,7 @@ export class CustomersController {
   }
 
   @Get(':id/credit')
+  @RequirePermissions('customers:view')
   @ApiOperation({ summary: 'Get customer credit information' })
   @ApiResponse({ status: 200, description: 'Credit information' })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -109,6 +115,7 @@ export class CustomersController {
   }
 
   @Get(':id/transactions')
+  @RequirePermissions('customers:view')
   @ApiOperation({ summary: 'Get customer transaction history' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -130,6 +137,7 @@ export class CustomersController {
   }
 
   @Put(':id')
+  @RequirePermissions('customers:edit')
   @ApiOperation({ summary: 'Update customer' })
   @ApiResponse({ status: 200, type: CustomerResponseDto })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -143,6 +151,7 @@ export class CustomersController {
   }
 
   @Delete(':id')
+  @RequirePermissions('customers:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete customer' })
   @ApiResponse({ status: 200, description: 'Customer deleted' })
@@ -157,6 +166,7 @@ export class CustomersController {
 
   // Address endpoints
   @Post(':id/addresses')
+  @RequirePermissions('customers:edit')
   @ApiOperation({ summary: 'Add customer address' })
   @ApiResponse({ status: 201, type: CustomerAddressResponseDto })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -170,6 +180,7 @@ export class CustomersController {
   }
 
   @Put(':id/addresses/:addressId')
+  @RequirePermissions('customers:edit')
   @ApiOperation({ summary: 'Update customer address' })
   @ApiResponse({ status: 200, type: CustomerAddressResponseDto })
   @ApiResponse({ status: 404, description: 'Customer or address not found' })
@@ -189,6 +200,7 @@ export class CustomersController {
   }
 
   @Delete(':id/addresses/:addressId')
+  @RequirePermissions('customers:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete customer address' })
   @ApiResponse({ status: 200, description: 'Address deleted' })
@@ -204,6 +216,7 @@ export class CustomersController {
 
   // Contact endpoints
   @Post(':id/contacts')
+  @RequirePermissions('customers:edit')
   @ApiOperation({ summary: 'Add customer contact' })
   @ApiResponse({ status: 201, type: CustomerContactResponseDto })
   @ApiResponse({ status: 404, description: 'Customer not found' })
@@ -217,6 +230,7 @@ export class CustomersController {
   }
 
   @Put(':id/contacts/:contactId')
+  @RequirePermissions('customers:edit')
   @ApiOperation({ summary: 'Update customer contact' })
   @ApiResponse({ status: 200, type: CustomerContactResponseDto })
   @ApiResponse({ status: 404, description: 'Customer or contact not found' })
@@ -236,6 +250,7 @@ export class CustomersController {
   }
 
   @Delete(':id/contacts/:contactId')
+  @RequirePermissions('customers:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete customer contact' })
   @ApiResponse({ status: 200, description: 'Contact deleted' })

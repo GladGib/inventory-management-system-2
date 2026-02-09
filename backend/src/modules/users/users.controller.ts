@@ -26,17 +26,18 @@ import {
   UserResponseDto,
   RoleResponseDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
-import { Roles } from '@/common/decorators/roles.decorator';
+import { CurrentUser, RequirePermissions, AuditEntity, Roles } from '@/common/decorators';
 
 @ApiTags('Users')
 @ApiBearerAuth()
+@AuditEntity('User')
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Post()
   @Roles('Administrator', 'Manager')
+  @RequirePermissions('users:create')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: 201, description: 'User created', type: UserResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -50,6 +51,7 @@ export class UsersController {
   }
 
   @Get()
+  @RequirePermissions('users:view')
   @ApiOperation({ summary: 'List all users' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -108,6 +110,7 @@ export class UsersController {
   }
 
   @Get('roles')
+  @RequirePermissions('users:view')
   @ApiOperation({ summary: 'Get available roles' })
   @ApiResponse({ status: 200, description: 'Roles list', type: [RoleResponseDto] })
   async getRoles(@CurrentUser('organizationId') orgId: string) {
@@ -116,6 +119,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @RequirePermissions('users:view')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User found', type: UserResponseDto })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -129,6 +133,7 @@ export class UsersController {
 
   @Put(':id')
   @Roles('Administrator', 'Manager')
+  @RequirePermissions('users:edit')
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated', type: UserResponseDto })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -144,6 +149,7 @@ export class UsersController {
 
   @Delete(':id')
   @Roles('Administrator')
+  @RequirePermissions('users:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({ status: 200, description: 'User deleted' })

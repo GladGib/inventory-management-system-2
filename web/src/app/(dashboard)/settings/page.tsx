@@ -19,14 +19,399 @@ import {
   Upload,
   Image,
   Spin,
+  Table,
+  Tag,
+  Modal,
+  Space,
 } from 'antd';
-import { UserOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  UserOutlined,
+  UploadOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  EditOutlined,
+} from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { organizationsService } from '@/services/organizations-service';
+import {
+  organizationsService,
+  TaxRate,
+  CreateTaxRateRequest,
+  NumberSequence,
+  UpdateNumberSequenceRequest,
+} from '@/services/organizations-service';
 import { FileUpload } from '@/components/ui';
+import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
+
+function TaxRatesTab() {
+  const { message, modal: modalApi } = App.useApp();
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTaxRate, setEditingTaxRate] = useState<TaxRate | null>(null);
+
+  const { data: taxRates, isLoading } = useQuery({
+    queryKey: ['taxRates'],
+    queryFn: () => organizationsService.getTaxRates(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateTaxRateRequest) => organizationsService.createTaxRate(data),
+    onSuccess: () => {
+      message.success('Tax rate created successfully');
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] });
+      handleCloseModal();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to create tax rate');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaxRateRequest> }) =>
+      organizationsService.updateTaxRate(id, data),
+    onSuccess: () => {
+      message.success('Tax rate updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] });
+      handleCloseModal();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to update tax rate');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => organizationsService.deleteTaxRate(id),
+    onSuccess: () => {
+      message.success('Tax rate deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['taxRates'] });
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Cannot delete tax rate — it may be in use');
+    },
+  });
+
+  const handleOpenModal = (taxRate?: TaxRate) => {
+    setEditingTaxRate(taxRate || null);
+    if (taxRate) {
+      form.setFieldsValue({
+        name: taxRate.name,
+        rate: taxRate.rate,
+        isActive: taxRate.isActive,
+      });
+    } else {
+      form.resetFields();
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTaxRate(null);
+    form.resetFields();
+  };
+
+  const handleSubmit = (values: CreateTaxRateRequest) => {
+    if (editingTaxRate) {
+      updateMutation.mutate({ id: editingTaxRate.id, data: values });
+    } else {
+      createMutation.mutate(values);
+    }
+  };
+
+  const handleDelete = (taxRate: TaxRate) => {
+    modalApi.confirm({
+      title: 'Delete Tax Rate',
+      content: `Are you sure you want to delete "${taxRate.name}"? This will fail if the tax rate is in use.`,
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      onOk: () => deleteMutation.mutate(taxRate.id),
+    });
+  };
+
+  const columns: ColumnsType<TaxRate> = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'Rate (%)',
+      dataIndex: 'rate',
+      key: 'rate',
+      width: 120,
+      render: (rate: number) => `${Number(rate).toFixed(2)}%`,
+    },
+    {
+      title: 'Status',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 100,
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? 'green' : 'default'}>
+          {isActive ? 'Active' : 'Inactive'}
+        </Tag>
+      ),
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 100,
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleOpenModal(record)}
+          />
+          <Button
+            type="text"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record)}
+          />
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <Card
+      title="Tax Rates"
+      extra={
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+          Add Tax Rate
+        </Button>
+      }
+    >
+      <Table
+        dataSource={taxRates}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        pagination={false}
+        size="middle"
+      />
+
+      <Modal
+        title={editingTaxRate ? 'Edit Tax Rate' : 'New Tax Rate'}
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        footer={null}
+        width={400}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{ isActive: true }}
+        >
+          <Form.Item
+            name="name"
+            label="Name"
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            <Input placeholder='e.g., "SST 10%"' />
+          </Form.Item>
+          <Form.Item
+            name="rate"
+            label="Rate (%)"
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            <InputNumber className="w-full" min={0} max={100} precision={2} placeholder="e.g., 10.00" />
+          </Form.Item>
+          <Form.Item name="isActive" label="Active" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Form.Item className="mb-0">
+            <Space className="w-full justify-end">
+              <Button onClick={handleCloseModal}>Cancel</Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingTaxRate ? 'Update' : 'Create'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </Card>
+  );
+}
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  SO: 'Sales Order',
+  PO: 'Purchase Order',
+  INV: 'Invoice',
+  GRN: 'Goods Received Note',
+  CN: 'Credit Note',
+  ADJ: 'Stock Adjustment',
+  TRF: 'Stock Transfer',
+  CNT: 'Stock Count',
+  BILL: 'Bill',
+  SHP: 'Shipment',
+  RET: 'Sales Return',
+};
+
+function NumberSequencesTab() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const [form] = Form.useForm();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSequence, setEditingSequence] = useState<NumberSequence | null>(null);
+
+  const { data: sequences, isLoading } = useQuery({
+    queryKey: ['numberSequences'],
+    queryFn: () => organizationsService.getNumberSequences(),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ documentType, data }: { documentType: string; data: UpdateNumberSequenceRequest }) =>
+      organizationsService.updateNumberSequence(documentType, data),
+    onSuccess: () => {
+      message.success('Number sequence updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['numberSequences'] });
+      setIsModalOpen(false);
+      setEditingSequence(null);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || 'Failed to update sequence');
+    },
+  });
+
+  const handleEdit = (sequence: NumberSequence) => {
+    setEditingSequence(sequence);
+    form.setFieldsValue({
+      prefix: sequence.prefix,
+      resetMonthly: sequence.resetMonthly,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = (values: UpdateNumberSequenceRequest) => {
+    if (editingSequence) {
+      updateMutation.mutate({
+        documentType: editingSequence.documentType,
+        data: values,
+      });
+    }
+  };
+
+  const columns: ColumnsType<NumberSequence> = [
+    {
+      title: 'Document Type',
+      dataIndex: 'documentType',
+      key: 'documentType',
+      render: (type: string) => (
+        <span>
+          <span className="font-mono font-medium">{type}</span>
+          <span className="text-gray-400 ml-2">{DOC_TYPE_LABELS[type] || type}</span>
+        </span>
+      ),
+    },
+    {
+      title: 'Prefix',
+      dataIndex: 'prefix',
+      key: 'prefix',
+      width: 120,
+      render: (prefix: string) => <span className="font-mono">{prefix}</span>,
+    },
+    {
+      title: 'Current #',
+      dataIndex: 'currentNumber',
+      key: 'currentNumber',
+      width: 100,
+      align: 'right',
+    },
+    {
+      title: 'Reset Monthly',
+      dataIndex: 'resetMonthly',
+      key: 'resetMonthly',
+      width: 120,
+      render: (reset: boolean) => (
+        <Tag color={reset ? 'blue' : 'default'}>
+          {reset ? 'Yes' : 'No'}
+        </Tag>
+      ),
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 60,
+      render: (_, record) => (
+        <Button
+          type="text"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => handleEdit(record)}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <Card title="Number Sequences">
+      <Text type="secondary" className="block mb-4">
+        Configure document number prefixes and reset behavior. The current number auto-increments as documents are created.
+      </Text>
+
+      <Table
+        dataSource={sequences}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        pagination={false}
+        size="middle"
+      />
+
+      <Modal
+        title={`Edit Sequence — ${editingSequence?.documentType || ''}`}
+        open={isModalOpen}
+        onCancel={() => { setIsModalOpen(false); setEditingSequence(null); }}
+        footer={null}
+        width={400}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+        >
+          <Form.Item
+            name="prefix"
+            label="Prefix"
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            <Input placeholder="e.g., SO-" />
+          </Form.Item>
+          <Form.Item name="resetMonthly" label="Reset Monthly" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Text type="secondary" className="block mb-4">
+            When enabled, the counter resets to 0 at the start of each month.
+          </Text>
+          <Form.Item className="mb-0">
+            <Space className="w-full justify-end">
+              <Button onClick={() => { setIsModalOpen(false); setEditingSequence(null); }}>Cancel</Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={updateMutation.isPending}
+              >
+                Update
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </Card>
+  );
+}
 
 export default function SettingsPage() {
   const { message } = App.useApp();
@@ -380,6 +765,16 @@ export default function SettingsPage() {
                 </Form>
               </Card>
             ),
+          },
+          {
+            key: 'tax-rates',
+            label: 'Tax Rates',
+            children: <TaxRatesTab />,
+          },
+          {
+            key: 'number-sequences',
+            label: 'Number Sequences',
+            children: <NumberSequencesTab />,
           },
           {
             key: 'notifications',

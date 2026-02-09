@@ -36,11 +36,14 @@ echo     [7] Run Database Migrations
 echo.
 echo     [8] Seed Database (Sample Data)
 echo.
+echo     [9] Install Dependencies (First Time)
+echo         (npm install for backend + web)
+echo.
 echo     [0] Exit
 echo.
 echo  ============================================
 echo.
-set /p choice="  Enter your choice (0-8): "
+set /p choice="  Enter your choice (0-9): "
 
 if "%choice%"=="1" goto start_web
 if "%choice%"=="2" goto start_mobile
@@ -50,6 +53,7 @@ if "%choice%"=="5" goto status
 if "%choice%"=="6" goto pgadmin
 if "%choice%"=="7" goto migrate
 if "%choice%"=="8" goto seed
+if "%choice%"=="9" goto install_deps
 if "%choice%"=="0" goto exit
 goto menu
 
@@ -85,7 +89,7 @@ if %errorlevel%==0 (
 ) else (
     echo   Starting PostgreSQL...
     cd /d "%PROJECT_ROOT%"
-    docker-compose up -d postgres
+    docker compose up -d postgres
     timeout /t 5 /nobreak >nul
 )
 
@@ -185,7 +189,7 @@ if %errorlevel%==0 (
 ) else (
     echo   Starting pgAdmin container...
     cd /d "%PROJECT_ROOT%"
-    docker-compose --profile tools up -d pgadmin
+    docker compose --profile tools up -d pgadmin
 )
 
 echo.
@@ -216,6 +220,29 @@ echo  Seeding Database with Sample Data...
 echo.
 cd /d "%PROJECT_ROOT%\backend"
 call npm run db:seed
+echo.
+pause
+goto menu
+
+:install_deps
+cls
+echo.
+echo  ============================================
+echo   Installing Dependencies
+echo  ============================================
+echo.
+echo [1/3] Installing Backend dependencies...
+cd /d "%PROJECT_ROOT%\backend"
+call npm install
+echo.
+echo [2/3] Generating Prisma client...
+call npm run db:generate
+echo.
+echo [3/3] Installing Web Frontend dependencies...
+cd /d "%PROJECT_ROOT%\web"
+call npm install
+echo.
+echo  All dependencies installed successfully!
 echo.
 pause
 goto menu

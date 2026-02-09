@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { PdfModule } from './common/pdf/pdf.module';
 import { UploadsModule } from './common/uploads/uploads.module';
@@ -23,6 +23,8 @@ import { BillsModule } from './modules/bills/bills.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -59,6 +61,16 @@ import { HealthController } from './health.controller';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // Apply RolesGuard globally - checks @Roles() and @RequirePermissions()
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    // Apply AuditLogInterceptor globally - logs mutations for @AuditEntity() controllers
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLogInterceptor,
     },
   ],
 })

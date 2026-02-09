@@ -27,15 +27,17 @@ import {
   BinLocationResponseDto,
   WarehouseStockSummaryDto,
 } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Warehouses')
 @ApiBearerAuth()
+@AuditEntity('Warehouse')
 @Controller('warehouses')
 export class WarehousesController {
   constructor(private warehousesService: WarehousesService) {}
 
   @Post()
+  @RequirePermissions('warehouses:create')
   @ApiOperation({ summary: 'Create a new warehouse' })
   @ApiResponse({ status: 201, type: WarehouseResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -48,6 +50,7 @@ export class WarehousesController {
   }
 
   @Get()
+  @RequirePermissions('warehouses:view')
   @ApiOperation({ summary: 'List all warehouses' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -70,6 +73,7 @@ export class WarehousesController {
   }
 
   @Get(':id')
+  @RequirePermissions('warehouses:view')
   @ApiOperation({ summary: 'Get warehouse by ID' })
   @ApiResponse({ status: 200, type: WarehouseResponseDto })
   @ApiResponse({ status: 404, description: 'Warehouse not found' })
@@ -82,6 +86,7 @@ export class WarehousesController {
   }
 
   @Get(':id/summary')
+  @RequirePermissions('warehouses:view')
   @ApiOperation({ summary: 'Get warehouse stock summary' })
   @ApiResponse({ status: 200, type: WarehouseStockSummaryDto })
   @ApiResponse({ status: 404, description: 'Warehouse not found' })
@@ -94,6 +99,7 @@ export class WarehousesController {
   }
 
   @Get(':id/stock')
+  @RequirePermissions('warehouses:view')
   @ApiOperation({ summary: 'Get warehouse stock levels' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -121,6 +127,7 @@ export class WarehousesController {
   }
 
   @Get(':id/stock/:itemId')
+  @RequirePermissions('warehouses:view')
   @ApiOperation({ summary: 'Get item stock level in warehouse' })
   @ApiResponse({ status: 200, description: 'Stock level' })
   @ApiResponse({ status: 404, description: 'Warehouse not found' })
@@ -138,6 +145,7 @@ export class WarehousesController {
   }
 
   @Put(':id')
+  @RequirePermissions('warehouses:edit')
   @ApiOperation({ summary: 'Update warehouse' })
   @ApiResponse({ status: 200, type: WarehouseResponseDto })
   @ApiResponse({ status: 404, description: 'Warehouse not found' })
@@ -151,6 +159,7 @@ export class WarehousesController {
   }
 
   @Put(':id/primary')
+  @RequirePermissions('warehouses:edit')
   @ApiOperation({ summary: 'Set warehouse as primary' })
   @ApiResponse({ status: 200, type: WarehouseResponseDto })
   @ApiResponse({ status: 404, description: 'Warehouse not found' })
@@ -163,6 +172,7 @@ export class WarehousesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('warehouses:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete warehouse' })
   @ApiResponse({ status: 200, description: 'Warehouse deleted' })
@@ -178,6 +188,7 @@ export class WarehousesController {
 
   // Bin Locations
   @Post(':id/bins')
+  @RequirePermissions('warehouses:create')
   @ApiOperation({ summary: 'Create bin location in warehouse' })
   @ApiResponse({ status: 201, type: BinLocationResponseDto })
   @ApiResponse({ status: 400, description: 'Bin code already exists' })
@@ -196,6 +207,7 @@ export class WarehousesController {
   }
 
   @Get(':id/bins')
+  @RequirePermissions('warehouses:view')
   @ApiOperation({ summary: 'List bin locations in warehouse' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -217,6 +229,7 @@ export class WarehousesController {
   }
 
   @Put(':id/bins/:binId')
+  @RequirePermissions('warehouses:edit')
   @ApiOperation({ summary: 'Update bin location' })
   @ApiResponse({ status: 200, type: BinLocationResponseDto })
   @ApiResponse({ status: 400, description: 'Bin code already exists' })
@@ -237,6 +250,7 @@ export class WarehousesController {
   }
 
   @Delete(':id/bins/:binId')
+  @RequirePermissions('warehouses:delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete bin location' })
   @ApiResponse({ status: 200, description: 'Bin location deleted' })

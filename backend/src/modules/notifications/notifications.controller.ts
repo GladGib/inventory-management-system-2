@@ -17,15 +17,17 @@ import {
 } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { RegisterDeviceDto, UpdatePreferencesDto } from './dto';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions, AuditEntity } from '@/common/decorators';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
+@AuditEntity('Notification')
 @Controller()
 export class NotificationsController {
   constructor(private notificationsService: NotificationsService) {}
 
   @Post('devices/register')
+  @RequirePermissions('notifications:edit')
   @ApiOperation({ summary: 'Register a device token for push notifications' })
   @ApiResponse({ status: 201, description: 'Device registered' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -39,6 +41,7 @@ export class NotificationsController {
   }
 
   @Delete('devices/:token')
+  @RequirePermissions('notifications:edit')
   @ApiOperation({ summary: 'Unregister a device token' })
   @ApiResponse({ status: 200, description: 'Device unregistered' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -51,6 +54,7 @@ export class NotificationsController {
   }
 
   @Get('users/me/notification-preferences')
+  @RequirePermissions('notifications:view')
   @ApiOperation({ summary: 'Get current user notification preferences' })
   @ApiResponse({ status: 200, description: 'Notification preferences' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -62,6 +66,7 @@ export class NotificationsController {
   }
 
   @Put('users/me/notification-preferences')
+  @RequirePermissions('notifications:edit')
   @ApiOperation({ summary: 'Update current user notification preferences' })
   @ApiResponse({ status: 200, description: 'Preferences updated' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -75,6 +80,7 @@ export class NotificationsController {
   }
 
   @Get('notifications')
+  @RequirePermissions('notifications:view')
   @ApiOperation({ summary: 'Get notification log for current user' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })

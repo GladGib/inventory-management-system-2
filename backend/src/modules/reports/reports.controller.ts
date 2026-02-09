@@ -2,7 +2,7 @@ import { Controller, Get, Query, UseGuards, Res, Header } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiProduces, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '@/common/decorators';
+import { CurrentUser, RequirePermissions } from '@/common/decorators';
 import { ReportsService } from './reports.service';
 import { ReportQueryDto } from './dto/report.dto';
 import { PdfService } from '@/common/pdf/pdf.service';
@@ -19,6 +19,7 @@ export class ReportsController {
   ) {}
 
   @Get('sales-summary')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get sales summary report' })
   @ApiResponse({ status: 200, description: 'Sales summary data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -30,6 +31,7 @@ export class ReportsController {
   }
 
   @Get('inventory-summary')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get inventory summary report' })
   @ApiResponse({ status: 200, description: 'Inventory summary data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -41,6 +43,7 @@ export class ReportsController {
   }
 
   @Get('purchase-summary')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get purchase summary report' })
   @ApiResponse({ status: 200, description: 'Purchase summary data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -52,6 +55,7 @@ export class ReportsController {
   }
 
   @Get('receivables-summary')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get accounts receivable summary' })
   @ApiResponse({ status: 200, description: 'Receivables summary data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -62,6 +66,7 @@ export class ReportsController {
   }
 
   @Get('payables-summary')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get accounts payable summary' })
   @ApiResponse({ status: 200, description: 'Payables summary data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -72,6 +77,7 @@ export class ReportsController {
   }
 
   @Get('stock-valuation')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get detailed stock valuation report' })
   @ApiQuery({ name: 'warehouseId', required: false, type: String })
   @ApiQuery({ name: 'categoryId', required: false, type: String })
@@ -85,6 +91,7 @@ export class ReportsController {
   }
 
   @Get('sales-by-customer')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get detailed sales by customer report' })
   @ApiResponse({ status: 200, description: 'Sales by customer data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -97,6 +104,7 @@ export class ReportsController {
 
   // Export endpoints
   @Get('stock-valuation/export/pdf')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Export stock valuation report as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -147,6 +155,7 @@ export class ReportsController {
   }
 
   @Get('stock-valuation/export/excel')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Export stock valuation report as Excel' })
   @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   @ApiResponse({ status: 200, description: 'Excel file' })
@@ -193,6 +202,7 @@ export class ReportsController {
   }
 
   @Get('sales-by-customer/export/pdf')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Export sales by customer report as PDF' })
   @ApiProduces('application/pdf')
   @ApiResponse({ status: 200, description: 'PDF file' })
@@ -248,6 +258,7 @@ export class ReportsController {
   }
 
   @Get('sales-by-customer/export/excel')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Export sales by customer report as Excel' })
   @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   @ApiResponse({ status: 200, description: 'Excel file' })
@@ -305,6 +316,7 @@ export class DashboardController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('stats')
+  @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get dashboard statistics' })
   @ApiResponse({ status: 200, description: 'Dashboard statistics' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

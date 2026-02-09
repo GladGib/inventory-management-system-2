@@ -31,7 +31,7 @@ if %errorlevel%==0 (
 ) else (
     echo   Starting PostgreSQL...
     cd /d "%PROJECT_ROOT%"
-    docker-compose up -d postgres
+    docker compose up -d postgres
     if errorlevel 1 (
         echo [ERROR] Failed to start PostgreSQL container.
         pause
